@@ -1,0 +1,38 @@
+{
+ "kind": "deformation",
+ "aoi": "sjv",
+ "name": "San Joaquin Valley (Tulare basin), California (USA)",
+ "product": "NISAR L2 GUNW",
+ "grid": {
+  "z": 9,
+  "x0": 85,
+  "y0": 200,
+  "tilesX": 3,
+  "tilesY": 3,
+  "cellsPerTile": 128
+ },
+ "generated": "2026-11-14T22:07:19+00:00",
+ "range": {
+  "start": "2026-09-20",
+  "end": "2026-10-25"
+ },
+ "layers": {
+  "disp": {
+   "dtype": "int16",
+   "scale": 0.1,
+   "unit": "mm",
+   "nodata": -32768,
+   "description": "LOS displacement, + toward satellite, relative to scene median"
+  },
+  "coh": {
+   "dtype": "uint16",
+   "scale": 0.001,
+   "unit": "",
+   "nodata": 65535,
+   "description": "mean interferometric coherence"
+  }
+ },
+ "method": "Per pair: unwrapped HH phase minus the product's ionospheric phase screen, converted to LOS displacement with -\u03bb/4\u03c0 (positive = toward the satellite). Samples with coherence < 0.3 or connected component 0 are dropped; per-cell median of 80 m samples (\u2265 8). Each pair is referenced to its scene median, so values are relative motion within the area.",
+ "limitations": "Single 12-day pairs are dominated by tropospheric noise (often \u00b11\u20132 cm); slow subsidence is clearer when pairs on one track are summed. Unwrapping errors can occur across low-coherence areas. Values are line-of-sight, not vertical.",
+ "frames": []
+}
