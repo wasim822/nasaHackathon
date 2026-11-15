@@ -369,3 +369,14 @@ input[type='range'] { accent-color: var(--mint); }
 .smoke-time { position: absolute; left: 6px; bottom: 6px; padding: 1px 6px; border-radius: 4px; background: rgba(2, 6, 12, 0.7); font-size: 11px; }
 .wind-arrow { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: rgba(2, 6, 12, 0.7); color: #fde68a; font-size: 18px; font-weight: 700; }
 .fire-img-nav input[type='range'] { flex: 1; }
+
+/* NOAA HMS smoke areas boxed over popup images (same mint as flood tracking boxes) */
+.smoke-boxes { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.smoke-outlines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.smoke-outlines polygon { fill: rgba(110, 231, 183, 0.07); stroke: #6ee7b7; stroke-width: 1.4; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(110, 231, 183, 0.5)); }
+.smoke-outlines polygon.light { stroke-width: 1; stroke-dasharray: 4 3; }
+.smoke-outlines polygon.heavy { stroke-width: 2.4; fill: rgba(110, 231, 183, 0.14); }
+.smoke-cover-badge { position: absolute; bottom: 6px; padding: 2px 7px; border-radius: 6px; border: 1px solid #6ee7b7; background: rgba(6, 40, 30, 0.85); color: #a7f3d0; font-size: 11px; white-space: nowrap; }
+.smoke-cover-badge.left { left: 6px; }
+.smoke-cover-badge.right { right: 6px; }
+.smoke-box-label { position: absolute; margin: 0 3px 3px 0; padding: 1px 5px; border-radius: 4px; background: rgba(6, 40, 30, 0.85); color: #a7f3d0; font-size: 10.5px; white-space: nowrap; }

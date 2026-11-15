@@ -6,7 +6,7 @@ import { fmtCoord } from '../../services/format';
 import { FireImagery } from './FireImagery';
 import { FirePopup } from './FirePopup';
 import { isoDay } from './gibsSnapshots';
-import { HMS_INFO, type SmokeDensity, smokeFor, subscribeSmoke } from './smoke';
+import { HMS_INFO, type SmokeDensity, ringBounds, smokeFor, subscribeSmoke } from './smoke';
 
 const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi';
 const SMOKE_EDGE: Record<SmokeDensity, string> = { light: '#cbd5e1', medium: '#94a3b8', heavy: '#64748b' };
@@ -128,6 +128,15 @@ function fireOverlays({ data, observations, index, layers, effects, selectedId, 
         kind: 'polygon', id: `smoke-${day.day}-${k}`, pane: 'reference', rings: [a.ring],
         color: SMOKE_EDGE[a.density], weight: 0.6, opacity: 0.5, fillColor: `url(#smoke-${a.density})`, fillOpacity: 1,
       }));
+      // Boxes mark where each analyst-drawn smoke area is (its outline's extent, not a measured plume edge).
+      if (effects.boundingBoxes) {
+        const cinematic = effects.mode === 'cinematic';
+        sm.areas.forEach((a, k) => out.push({
+          kind: 'rect', id: `smoke-box-${day.day}-${k}`, pane: 'effects', bounds: ringBounds(a.ring),
+          color: cinematic ? '#86efac' : '#6ee7b7', weight: cinematic ? 1.6 : 1.1, opacity: cinematic ? 0.95 : 0.8, glow: cinematic,
+          label: effects.trackingIds ? `Smoke · ${a.density}` : undefined,
+        }));
+      }
     }
   }
   // Satellite heat detections (VIIRS 375 m) for this UTC day, drawn by NASA GIBS.
@@ -288,7 +297,7 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   summary: `Wildfire incident reports for the ${REGION_NAME} via NASA EONET (largely from the US IRWIN incident system). These are reported locations — not satellite hotspots or perimeters.`,
   missionId: 'viirs',
   supportsTracking: true,
-  effectControls: ['trackingIds', 'trails', 'trailLength', 'highlightSelected'],
+  effectControls: ['boundingBoxes', 'trackingIds', 'trails', 'trailLength', 'highlightSelected'],
   defaultOptions: { trailingDays: 7 },
   availableLayers: [
     { id: 'reports', label: 'Reported incidents (current day)', description: 'Incident locations reported on the selected UTC day. Size from the reporting agency when provided.', provenance: 'report', defaultVisible: true, swatch: '#f97316' },
