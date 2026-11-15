@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon } from '../Icon';
 import type { FilterDefinition } from '../../types';
 import type { LoadState } from '../../state/store';
 import { REGION_NAME } from '../../services/geospatial/region';
@@ -20,11 +21,11 @@ export function FilterSidebar({ filters, activeId, open, onToggleOpen, onSelect,
   return (
     <>
       <button className="sidebar-toggle" onClick={onToggleOpen} aria-expanded={open} aria-controls="filter-sidebar" aria-label={open ? 'Hide data filters' : 'Show data filters'}>
-        {open ? '‹' : '☰ Filters'}
+        {open ? '‹' : <><Icon name="menu" /> Filters</>}
       </button>
       <nav id="filter-sidebar" className={`sidebar ${open ? 'open' : ''}`} aria-label="Data filters">
         <header className="brand">
-          <div className="brand-mark" aria-hidden>◐</div>
+          <div className="brand-mark" aria-hidden><Icon name="globe" size={18} /></div>
           <div>
             <h1>Earth Change Explorer</h1>
             <div className="muted small">{`Watch Earth change · ${REGION_NAME}`}</div>
@@ -37,7 +38,7 @@ export function FilterSidebar({ filters, activeId, open, onToggleOpen, onSelect,
             className={`filter-item ${activeId === null ? 'active' : ''}`}
             onClick={() => onSelect(null)}
           >
-            <span className="fi-icon" aria-hidden>🛰️</span>
+            <span className="fi-icon" aria-hidden><Icon name="satellite" /></span>
             <span className="fi-label">Basemap only</span>
           </button>
           {filters.map((f) => {
@@ -52,7 +53,7 @@ export function FilterSidebar({ filters, activeId, open, onToggleOpen, onSelect,
                 onClick={() => !soon && onSelect(f.id)}
                 title={f.summary}
               >
-                <span className="fi-icon" aria-hidden>{f.icon}</span>
+                <span className="fi-icon" aria-hidden><Icon name={f.icon} /></span>
                 <span className="fi-label">{f.label}</span>
                 <span className={`status status-${f.status}`}>{STATUS_TEXT[f.status]}</span>
                 {activeId === f.id && loadState === 'loading' && <span className="spinner" aria-label="Loading" />}

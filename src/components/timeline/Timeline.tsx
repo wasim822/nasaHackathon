@@ -7,6 +7,7 @@ import { SPEEDS, type Speed } from '../../services/playback';
 import type { LoadState } from '../../state/store';
 import { RangePicker } from './RangePicker';
 import { TimeSeriesChart } from '../charts/TimeSeriesChart';
+import { Icon } from '../Icon';
 
 export interface TimelineProps {
   range: TimeRange | null;
@@ -159,7 +160,7 @@ export function Timeline(p: TimelineProps) {
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
           >
-            <span className="range-icon" aria-hidden>📅</span>
+            <span className="range-icon" aria-hidden><Icon name="calendar" size={14} /></span>
             {p.range ? fmtRangeCompact(p.range.start, p.range.end) : 'No range'}
           </button>
           <span className="utc-badge" title="All times are UTC">UTC</span>
@@ -250,17 +251,17 @@ export function Timeline(p: TimelineProps) {
         </div>
 
         <div className="tl-controls">
-          <button className="ctl" onClick={() => p.onStep(-1)} disabled={!n || p.currentIndex <= 0} aria-label="Previous observation" title="Previous observation (←)">⏮</button>
+          <button className="ctl" onClick={() => p.onStep(-1)} disabled={!n || p.currentIndex <= 0} aria-label="Previous observation" title="Previous observation (←)"><Icon name="skip-back" /></button>
           <button className="ctl play" onClick={p.onPlayPause} disabled={n < 2} aria-label={p.playing ? 'Pause' : 'Play'} title={p.playing ? 'Pause (Space)' : 'Play (Space)'}>
-            {p.playing ? '⏸' : '▶'}
+            <Icon name={p.playing ? 'pause' : 'play'} />
           </button>
-          <button className="ctl" onClick={() => p.onStep(1)} disabled={!n || p.currentIndex >= n - 1} aria-label="Next observation" title="Next observation (→)">⏭</button>
+          <button className="ctl" onClick={() => p.onStep(1)} disabled={!n || p.currentIndex >= n - 1} aria-label="Next observation" title="Next observation (→)"><Icon name="skip-forward" /></button>
           <select className="speed" value={p.speed} onChange={(e) => p.onSpeed(Number(e.target.value) as Speed)} aria-label="Playback speed">
             {SPEEDS.map((s) => (
               <option key={s} value={s}>{`${s}×`}</option>
             ))}
           </select>
-          <button className={`ctl loop ${p.loop ? 'on' : ''}`} onClick={() => p.onLoop(!p.loop)} aria-pressed={p.loop} aria-label="Loop playback" title="Loop">🔁</button>
+          <button className={`ctl loop ${p.loop ? 'on' : ''}`} onClick={() => p.onLoop(!p.loop)} aria-pressed={p.loop} aria-label="Loop playback" title="Loop"><Icon name="repeat" /></button>
         </div>
       </div>
       <div className="tl-frame" aria-live="polite">

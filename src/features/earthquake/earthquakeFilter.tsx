@@ -191,7 +191,7 @@ function QuakeOptionsPanel({ options, onChange }: OptionsProps<QuakeOptions>) {
 export const earthquakeFilter: FilterDefinition<QuakeData, QuakeOptions> = {
   id: 'earthquake',
   label: 'Earthquake',
-  icon: '📍',
+  icon: 'pin',
   status: 'live',
   summary: `Epicenters from the USGS ComCat earthquake catalog for the ${REGION_NAME}. Each timeline frame is one UTC day containing catalog events.`,
   missionId: 'usgs',

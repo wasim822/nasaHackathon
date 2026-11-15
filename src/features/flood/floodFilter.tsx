@@ -316,8 +316,8 @@ function FloodOptionsPanel({ options, onChange, onRange }: OptionsProps<FloodOpt
 export const floodFilter: FilterDefinition<FloodData, FloodOptions> = {
   id: 'flood',
   label: 'Flood',
-  icon: '🌊',
-  status: 'live',
+  icon: 'waves',
+  status: 'demo',
   summary: `Potential flooding vs. historical surface water — ${AOI.name}. Water is classified from real NISAR L-band radar passes (or simulated demo scenes, selectable in Options).`,
   missionId: 'nisar',
   supportsTracking: true,

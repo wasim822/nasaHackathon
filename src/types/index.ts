@@ -1,3 +1,4 @@
+import type { IconName } from '../components/Icon';
 import type { ComponentType } from 'react';
 
 /** Milliseconds since the Unix epoch (UTC). */
@@ -232,7 +233,7 @@ export interface FilterDefinition<TData = unknown, TOptions = unknown> {
   status: FilterStatus;
   /** One-line plain-language description. */
   summary: string;
-  icon: string;
+  icon: IconName;
   availableLayers: LayerDefinition[];
   sourceAttribution: SourceInfo[];
   /** Whether the Off/Clean/Cinematic Tracking Effect selector applies. */

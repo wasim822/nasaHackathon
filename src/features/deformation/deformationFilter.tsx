@@ -202,7 +202,7 @@ const RAMP = 'linear-gradient(90deg,#dc2e21,#ffedd5 45%,#e0f2fe 55%,#2266e0)';
 export const deformationFilter: FilterDefinition<DeformationData, DeformationOptions> = {
   id: 'deformation',
   label: 'Ground Deformation',
-  icon: '📐',
+  icon: 'ruler',
   status: 'live',
   summary: `Line-of-sight ground motion from real NISAR L-band interferograms — ${DEFORMATION_AOI.name}, where groundwater pumping causes land subsidence.`,
   missionId: 'nisar',

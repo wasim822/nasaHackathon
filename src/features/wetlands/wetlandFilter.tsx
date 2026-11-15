@@ -188,7 +188,7 @@ function WetlandDetail({ data, index, selectedId, onClose }: DetailProps<Wetland
 export const wetlandFilter: FilterDefinition<WetlandData, Options> = {
   id: 'wetlands',
   label: 'Wetlands',
-  icon: '🌿',
+  icon: 'sprout',
   status: 'live',
   summary: `Open water and inundated vegetation from real NISAR L-band passes — ${WETLAND_AOI.name}. L-band radar sees water under the forest canopy through “double bounce”.`,
   missionId: 'nisar',
