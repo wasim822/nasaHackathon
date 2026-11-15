@@ -39,6 +39,11 @@ export interface Observation {
 /** Where a layer's content comes from. Drives legend badges. */
 export type Provenance = 'observed' | 'derived' | 'reference' | 'catalog' | 'report' | 'demo' | 'estimated';
 
+/** A continuous colour ramp with evenly spaced labels, or discrete colour → meaning keys. */
+export type LayerLegend =
+  | { ramp: string; labels: string[] }
+  | { items: { color: string; label: string }[] };
+
 export interface LayerDefinition {
   id: string;
   label: string;
@@ -47,6 +52,8 @@ export interface LayerDefinition {
   defaultVisible: boolean;
   /** CSS colour or pattern key for the legend swatch. */
   swatch?: string;
+  /** Colour key shown in the map legend (falls back to the swatch). May depend on the filter's options. */
+  legend?: LayerLegend | ((options: any) => LayerLegend);
   /** If set, layer is shown disabled with this explanation. */
   unavailableReason?: string;
 }

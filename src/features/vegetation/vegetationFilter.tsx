@@ -59,8 +59,18 @@ export const vegetationFilter: FilterDefinition<VegData, VegOptions> = {
   timeline: false,
   defaultOptions: { date: defaultDate(), opacity: 0.85, barePink: true },
   availableLayers: [
-    { id: 'ndvi', label: 'Vegetation (NDVI)', description: 'Normalized Difference Vegetation Index from VIIRS: dark green = dense vegetation, light yellow-green = sparse vegetation, pink = bare land / little or no vegetation (deeper pink = barer: bare soil, rock, sand, cities, but also dry or dormant fields and winter landscapes). With the pink highlight off, that end shows in NASA’s original tan/brown. Water and remaining gaps are blank.', provenance: 'derived', defaultVisible: true, swatch: 'linear-gradient(90deg,#db2777,#fbcfe8,#e6efa0,#6fbf3a,#0b5d1e)' },
-    { id: 'landcover', label: 'Land cover (yearly)', description: 'MODIS land-cover classes (IGBP), yearly 2001–2024 (the year nearest your date): dark green = forest, yellows/oranges = grassland and cropland, red = cities, light blue = water. Full class legend via the Worldview link in Sources.', provenance: 'derived', defaultVisible: false, swatch: 'linear-gradient(90deg,#1b7a1b,#f5e26b,#eaa45c,#e0241b,#8fc8e8)' },
+    { id: 'ndvi', label: 'Vegetation (NDVI)', description: 'Normalized Difference Vegetation Index from VIIRS: dark green = dense vegetation, light yellow-green = sparse vegetation, pink = bare land / little or no vegetation (deeper pink = barer: bare soil, rock, sand, cities, but also dry or dormant fields and winter landscapes). With the pink highlight off, that end shows in NASA’s original tan/brown. Water and remaining gaps are blank.', provenance: 'derived', defaultVisible: true, swatch: 'linear-gradient(90deg,#db2777,#fbcfe8,#e6efa0,#6fbf3a,#0b5d1e)',
+      legend: (o: VegOptions) => ({
+        ramp: o.barePink ? 'linear-gradient(90deg,#db2777,#fbcfe8,#e6efa0,#6fbf3a,#0b5d1e)' : 'linear-gradient(90deg,#8c5a2b,#d8c39a,#f2f0d8,#6fbf3a,#0b5d1e)',
+        labels: ['Bare land', 'Sparse', 'Dense'],
+      }) },
+    { id: 'landcover', label: 'Land cover (yearly)', description: 'MODIS land-cover classes (IGBP), yearly 2001–2024 (the year nearest your date): dark green = forest, yellows/oranges = grassland and cropland, red = cities, light blue = water. Full class legend via the Worldview link in Sources.', provenance: 'derived', defaultVisible: false, swatch: 'linear-gradient(90deg,#1b7a1b,#f5e26b,#eaa45c,#e0241b,#8fc8e8)',
+      legend: { items: [
+        { color: '#1b7a1b', label: 'Forest' },
+        { color: 'linear-gradient(90deg,#f5e26b,#eaa45c)', label: 'Grassland / cropland' },
+        { color: '#e0241b', label: 'Cities' },
+        { color: '#8fc8e8', label: 'Water' },
+      ] } },
   ],
   sourceAttribution: [
     { name: 'NASA GIBS — VIIRS NOAA-20 NDVI (16-day L3 and 8-day near real time)', url: LEGEND, type: 'Satellite vegetation index composites (~1 km)', detail: 'Each composite combines many cloud-screened passes. Stacked newest on top so older composites fill gaps. Open in Worldview for the colour legend.' },

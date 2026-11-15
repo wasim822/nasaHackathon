@@ -44,6 +44,48 @@ export function LayerList({
   );
 }
 
+function Swatch({ bg }: { bg?: string }) {
+  return <span className={`swatch ${bg === 'hatch' ? 'hatch' : ''}`} style={bg && bg !== 'hatch' ? { background: bg } : undefined} aria-hidden />;
+}
+
+/** Floating map key for the active filter's visible layers. */
+export function MapLegend({ filter, visibility, options }: { filter: FilterDefinition<any, any>; visibility: Record<string, boolean>; options: unknown }) {
+  const shown = filter.availableLayers.filter((l) => visibility[l.id] && !l.unavailableReason);
+  if (!shown.length) return null;
+  return (
+    <aside className="map-legend" aria-label={`${filter.label} legend`}>
+      {shown.map((l) => {
+        const lg = typeof l.legend === 'function' ? l.legend(options) : l.legend;
+        return (
+          <div key={l.id} className="lg-layer">
+            {!lg && (
+              <div className="lg-row">
+                <Swatch bg={l.swatch} />
+                {l.label}
+              </div>
+            )}
+            {lg && <div className="lg-title">{l.label}</div>}
+            {lg && 'ramp' in lg && (
+              <>
+                <div className="lg-ramp" style={{ background: lg.ramp }} />
+                <div className="lg-ramp-labels">
+                  {lg.labels.map((t) => <span key={t}>{t}</span>)}
+                </div>
+              </>
+            )}
+            {lg && 'items' in lg && lg.items.map((it) => (
+              <div key={it.label} className="lg-row">
+                <Swatch bg={it.color} />
+                {it.label}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </aside>
+  );
+}
+
 const TOGGLE_TEXT: Partial<Record<keyof EffectSettings, string>> = {
   boundingBoxes: 'Bounding Boxes',
   trackingIds: 'Tracking IDs',

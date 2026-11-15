@@ -200,7 +200,14 @@ export const earthquakeFilter: FilterDefinition<QuakeData, QuakeOptions> = {
   effectControls: [],
   defaultOptions: { minMagnitude: 2.5, trailingDays: 7 },
   availableLayers: [
-    { id: 'events', label: 'Epicenters (current day)', description: 'Catalog events on the selected UTC day. Size and colour scale with magnitude.', provenance: 'catalog', defaultVisible: true, swatch: '#f97316' },
+    { id: 'events', label: 'Epicenters (current day)', description: 'Catalog events on the selected UTC day. Size and colour scale with magnitude.', provenance: 'catalog', defaultVisible: true, swatch: '#f97316',
+      legend: { items: [
+        { color: '#ef4444', label: 'M6+' },
+        { color: '#f97316', label: 'M5–6' },
+        { color: '#f59e0b', label: 'M4–5' },
+        { color: '#facc15', label: 'M3–4' },
+        { color: '#fde68a', label: 'Below M3' },
+      ] } },
     { id: 'recent', label: 'Earlier events (fading)', description: 'Events from preceding days in the chosen trailing window.', provenance: 'catalog', defaultVisible: true, swatch: 'rgba(250,204,21,0.45)' },
     { id: 'insar', label: 'Ground deformation (InSAR)', description: 'Interferometric displacement from SAR pairs.', provenance: 'observed', defaultVisible: false, unavailableReason: 'Not connected yet — requires NISAR/Sentinel-1 interferogram products for the event area.' },
   ],
