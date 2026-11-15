@@ -113,24 +113,31 @@ export interface NisarSearchResult {
   truncated: boolean;
 }
 
-export async function searchNisar(product: NisarProduct, bounds: GeoBounds, range: TimeRange, signal: AbortSignal): Promise<NisarSearchResult> {
+export async function searchNisar(product: NisarProduct, bounds: GeoBounds, range: TimeRange, signal: AbortSignal, maxPages = 1): Promise<NisarSearchResult> {
   const b = clampBounds(bounds);
   const temporal = `${new Date(range.start).toISOString()},${new Date(range.end).toISOString()}`;
   const results = await Promise.all(
     NISAR_PRODUCTS[product].collections.map(async ({ shortName, status }) => {
-      const params = new URLSearchParams({
-        short_name: shortName,
-        bounding_box: `${b.west},${b.south},${b.east},${b.north}`,
-        temporal,
-        page_size: String(NISAR_PAGE_SIZE),
-        sort_key: '-start_date',
-      });
-      const res = await fetch(`${CMR}?${params}`, { signal });
-      if (!res.ok) throw new Error(`NASA CMR search failed (HTTP ${res.status})`);
-      const hits = Number(res.headers.get('CMR-Hits') ?? '0');
-      const json = (await res.json()) as { feed: { entry: CmrEntry[] } };
-      const scenes = json.feed.entry.map((e) => parseCmrEntry(e, product, status)).filter((x): x is NisarScene => !!x);
-      return { scenes, truncated: hits > NISAR_PAGE_SIZE };
+      const scenes: NisarScene[] = [];
+      let hits = 0;
+      for (let page = 1; page <= maxPages; page++) {
+        const params = new URLSearchParams({
+          short_name: shortName,
+          bounding_box: `${b.west},${b.south},${b.east},${b.north}`,
+          temporal,
+          page_size: String(NISAR_PAGE_SIZE),
+          page_num: String(page),
+          sort_key: '-start_date',
+        });
+        const res = await fetch(`${CMR}?${params}`, { signal });
+        if (!res.ok) throw new Error(`NASA CMR search failed (HTTP ${res.status})`);
+        hits = Number(res.headers.get('CMR-Hits') ?? '0');
+        const json = (await res.json()) as { feed: { entry: CmrEntry[] } };
+        scenes.push(...json.feed.entry.map((e) => parseCmrEntry(e, product, status)).filter((x): x is NisarScene => !!x));
+        if (json.feed.entry.length < NISAR_PAGE_SIZE || page * NISAR_PAGE_SIZE >= hits) break;
+      }
+      // Newest first, so truncation drops the oldest products.
+      return { scenes, truncated: hits > maxPages * NISAR_PAGE_SIZE };
     }),
   );
   // A validated product supersedes a provisional one of the same acquisition.
@@ -146,40 +153,75 @@ export async function searchNisar(product: NisarProduct, bounds: GeoBounds, rang
   };
 }
 
-/**
- * One clean strip: the single acquisition nearest the reference time (or the pinned
- * scene), plus the other frames of that same pass (same track and direction, acquired
- * within minutes), so adjacent frames join seamlessly instead of overlapping.
- */
-export function selectPass(scenes: NisarScene[], refTime: number, windowMs: number, pinnedId: string | null, max = 12): NisarScene[] {
-  let anchor = pinnedId ? scenes.find((s) => s.id === pinnedId) : undefined;
-  if (!anchor) {
-    for (const s of scenes) {
-      const d = Math.abs(s.time - refTime);
-      if (d <= windowMs && (!anchor || d < Math.abs(anchor.time - refTime))) anchor = s;
-    }
-  }
-  if (!anchor) return [];
-  const a = anchor;
-  const near = (x: number, y: number) => Math.abs(x - y) <= 15 * 60 * 1000;
-  const samePass = scenes.filter((s) => s.id !== a.id && s.track === a.track && s.direction === a.direction && near(s.start, a.start) && near(s.end, a.end));
-  return [a, ...samePass].slice(0, max);
+/** One satellite pass: adjoining product frames from the same track, direction and minutes. */
+export interface NisarPass {
+  id: string;
+  product: NisarProduct;
+  /** Timeline time: first acquisition start (GCOV) or the later acquisition (GUNW). */
+  time: number;
+  start: number;
+  end: number;
+  track: number | null;
+  direction: NisarScene['direction'];
+  /** Validated only if every frame is. */
+  status: NisarStatus;
+  scenes: NisarScene[];
 }
 
+/** Frames whose acquisitions are within this of the previous frame's belong to the same pass. */
+const SAME_PASS_MS = 15 * 60 * 1000;
+
 /**
- * Chooses which scenes to draw for a reference time: for each repeat-pass stack the
- * acquisition nearest in time (within ±windowDays). A pinned scene is always included.
+ * Groups scenes into passes in time order. Frames of one pass are acquired seconds apart along
+ * the orbit; the next pass over the same area is hours or days later.
  */
-export function selectScenes(scenes: NisarScene[], refTime: number, windowMs: number, pinnedId: string | null, max = 10): NisarScene[] {
-  const best = new Map<string, NisarScene>();
-  for (const s of scenes) {
-    const d = Math.abs(s.time - refTime);
-    if (d > windowMs) continue;
-    const cur = best.get(s.stack);
-    if (!cur || d < Math.abs(cur.time - refTime)) best.set(s.stack, s);
+export function groupPasses(scenes: NisarScene[]): NisarPass[] {
+  const sorted = [...scenes].sort((a, b) => a.start - b.start || (a.frame ?? 0) - (b.frame ?? 0));
+  const open: NisarPass[] = [];
+  const out: NisarPass[] = [];
+  for (const s of sorted) {
+    const p = open.find(
+      (q) => q.track === s.track && q.direction === s.direction && q.product === s.product
+        && Math.abs(s.start - q.scenes[q.scenes.length - 1].start) <= SAME_PASS_MS
+        && Math.abs(s.end - q.scenes[q.scenes.length - 1].end) <= SAME_PASS_MS,
+    );
+    if (p) {
+      p.scenes.push(s);
+      p.start = Math.min(p.start, s.start);
+      p.end = Math.max(p.end, s.end);
+      p.time = s.product === 'GUNW' ? Math.max(p.time, s.time) : p.start;
+      if (s.status !== 'Validated') p.status = 'Provisional';
+      continue;
+    }
+    const np: NisarPass = {
+      id: `pass:${s.id}`, product: s.product, time: s.time, start: s.start, end: s.end,
+      track: s.track, direction: s.direction, status: s.status, scenes: [s],
+    };
+    open.push(np);
+    out.push(np);
+    // Passes older than the window can't receive more frames.
+    for (let i = open.length - 1; i >= 0; i--) if (s.start - open[i].start > SAME_PASS_MS * 2) open.splice(i, 1);
   }
-  let out = [...best.values()].sort((a, b) => Math.abs(a.time - refTime) - Math.abs(b.time - refTime)).slice(0, max);
-  const pinned = pinnedId ? scenes.find((s) => s.id === pinnedId) : undefined;
-  if (pinned) out = [pinned, ...out.filter((s) => s.id !== pinned.id && s.stack !== pinned.stack)].slice(0, max);
+  return out.sort((a, b) => a.time - b.time);
+}
+
+/** Ray-casting point-in-polygon on [lat, lng] rings (footprints don't cross the antimeridian here). */
+export function pointInPolygon([lat, lng]: LatLng, ring: LatLng[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [yi, xi] = ring[i];
+    const [yj, xj] = ring[j];
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Scenes (of the given passes) whose footprint contains the point. */
+export function scenesAt(passes: NisarPass[], at: LatLng): { pass: NisarPass; scene: NisarScene }[] {
+  const out: { pass: NisarPass; scene: NisarScene }[] = [];
+  for (const pass of passes) {
+    const scene = pass.scenes.find((s) => s.footprint.length > 2 && pointInPolygon(at, s.footprint));
+    if (scene) out.push({ pass, scene });
+  }
   return out;
 }

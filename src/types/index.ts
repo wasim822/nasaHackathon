@@ -154,6 +154,8 @@ export interface CircleOverlay extends OverlayBase {
   strokeOpacity?: number;
   weight?: number;
   tooltip?: string;
+  /** Keep the tooltip open as a label (used for locator markers). */
+  tooltipPermanent?: boolean;
   selectId?: string;
   pulse?: 'subtle' | 'strong' | null;
 }
@@ -254,6 +256,8 @@ export interface FilterDefinition<TData = unknown, TOptions = unknown> {
   hitTest?(ctx: FrameContext<TData, TOptions>, at: LatLng): string | null;
   extent?(data: TData): GeoBounds | null;
   Detail?: ComponentType<DetailProps<TData, TOptions>>;
+  /** Optional floating card over the map, opened by clicking a map item; closes on map drag/zoom or outside click. */
+  Popup?: ComponentType<DetailProps<TData, TOptions>>;
   Options?: ComponentType<OptionsProps<TOptions>>;
   /** Release caches / object URLs when deactivated. */
   dispose?(): void;

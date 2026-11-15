@@ -3,6 +3,8 @@ import { REGION_BOXES, REGION_NAME, isInRegion } from '../../services/geospatial
 import { DAY, fmtDate, fmtDateTime, fmtIso } from '../../services/time/format';
 import { groupByUtcDay } from '../../services/time/group';
 import { fmtCoord } from '../../services/format';
+import { FireImagery } from './FireImagery';
+import { FirePopup } from './FirePopup';
 
 /** One dated location report for a wildfire event, as published by EONET's sources. */
 export interface FireReport {
@@ -189,7 +191,7 @@ function fireStats({ data, index, observations, options }: Ctx): StatItem[] {
   ];
 }
 
-function FireDetail({ data, selectedId, onClose }: DetailProps<FireData, FireOptions>) {
+function FireDetail({ data, observations, index, selectedId, onClose }: DetailProps<FireData, FireOptions>) {
   const ev = selectedId ? data.events[selectedId] : undefined;
   if (!ev) return null;
   const last = ev.reports[ev.reports.length - 1];
@@ -221,6 +223,7 @@ function FireDetail({ data, selectedId, onClose }: DetailProps<FireData, FireOpt
         </dd>
       </dl>
       <p className="small muted">A point report of an incident location — not a mapped fire perimeter and not a satellite hotspot detection.</p>
+      <FireImagery at={last.at} firstReport={ev.reports[0].time} lastReport={last.time} timelineDay={observations[index]?.time ?? null} />
     </section>
   );
 }
@@ -261,6 +264,7 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   ],
   sourceAttribution: [
     { name: 'NASA EONET v3 — Wildfires category', url: 'https://eonet.gsfc.nasa.gov/', type: 'Event aggregator (incident reports)', detail: 'Live query. Underlying sources (e.g. IRWIN, GDACS) are linked per event.' },
+    { name: 'NASA GIBS / Worldview Snapshots — VIIRS & MODIS', url: 'https://nasa-gibs.github.io/gibs-api-docs/', type: 'Satellite optical imagery and thermal-anomaly detections', detail: 'Shown when you click a fire: daily corrected-reflectance true colour plus the same sensor’s active-fire detections (VIIRS 375 m / MODIS 1 km) for the chosen UTC day.' },
   ],
   defaultRange: (now) => ({ start: now - 30 * DAY, end: now }),
   dataBounds: (now) => ({ start: Date.UTC(2000, 0, 1), end: now }),
@@ -307,5 +311,6 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
     return { south: Math.min(...lats), north: Math.max(...lats), west: Math.min(...lngs), east: Math.max(...lngs) };
   },
   Detail: FireDetail,
+  Popup: FirePopup,
   Options: FireOptionsPanel,
 };

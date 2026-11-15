@@ -49,6 +49,13 @@ AOIS = {
                 out="nisar-flood"),
     "atchafalaya": dict(name="Atchafalaya Basin wetlands, Louisiana (USA)", z=9, x0=124, y0=209, tiles_x=3, tiles_y=3, cells_per_tile=128,
                         out="nisar-wetland"),
+    # Candidate flood areas from NASA EONET / GDACS flood events with NISAR coverage (screening).
+    "mtl": dict(name="Ottawa River & Lake of Two Mountains, Montréal (Canada)", z=9, x0=149, y0=182, tiles_x=3, tiles_y=3, cells_per_tile=128,
+                out="nisar-flood"),
+    "mb": dict(name="Swan River & Assiniboine headwaters, Manitoba–Saskatchewan (Canada)", z=9, x0=111, y0=167, tiles_x=3, tiles_y=3, cells_per_tile=128,
+               out="nisar-flood"),
+    "yak": dict(name="Yakima River valley, Washington (USA)", z=9, x0=83, y0=180, tiles_x=3, tiles_y=3, cells_per_tile=128,
+                out="nisar-flood"),
 }
 COLLECTIONS = [("NISAR_L2_GCOV_V1", "Validated"), ("NISAR_L2_GCOV_PROVISIONAL_V1", "Provisional")]
 
@@ -346,9 +353,12 @@ def main():
             granules=[g["title"] for g in gs],
             coverage=round(coverage, 4),
             waterFraction=round(float(np.mean(cls == 2)), 4),
+            # Water where JRC says water is historically rare (< 50 %): the app's "potential flood".
+            newWaterFraction=round(float(np.mean((cls == 2) & (occ < 50))), 4),
             **quality,
         ))
-        log(f"  {pid}: coverage {coverage:.0%}, water {np.mean(cls == 2):.1%}, bright-veg {np.mean(cls == 3):.1%}, {quality}")
+        log(f"  {pid}: coverage {coverage:.0%}, water {np.mean(cls == 2):.1%}, new water {np.mean((cls == 2) & (occ < 50)):.2%}, "
+            f"bright-veg {np.mean(cls == 3):.1%}, {quality}")
 
     # Persistently bright cells (bright in nearly every pass) are structures, not seasonal flooding.
     persistent = np.zeros(len(occ), bool)

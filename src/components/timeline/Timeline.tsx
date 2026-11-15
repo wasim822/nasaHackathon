@@ -126,7 +126,7 @@ export function Timeline(p: TimelineProps) {
   const inRange = (t: number) => !!p.range && t >= p.range.start && t <= p.range.end;
 
   let statusText = '';
-  if (!p.filterActive) statusText = 'Select a data filter to load observations';
+  if (!p.filterActive) statusText = 'Select a data filter, or turn on NISAR passes, to load observations';
   else if (p.loadState === 'loading') statusText = 'Loading observations…';
   else if (p.loadState === 'error') statusText = 'Could not load observations';
   else if (p.loadState === 'empty') statusText = 'No observations in this date range';

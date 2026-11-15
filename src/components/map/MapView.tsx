@@ -21,6 +21,8 @@ export interface MapViewProps {
   onSelect(id: string): void;
   onMapClick(at: LatLng): void;
   onViewChange?(bounds: GeoBounds, zoom: number): void;
+  /** The user started dragging or zooming (not programmatic resize/pan). */
+  onUserMove?(): void;
 }
 
 export function MapView(props: MapViewProps) {
@@ -56,6 +58,8 @@ export function MapView(props: MapViewProps) {
       cb.current.onViewChange?.({ south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }, map.getZoom());
     };
     map.on('moveend', reportView);
+    // Not 'movestart': container resizes (drawers opening) also fire it.
+    map.on('dragstart zoomstart', () => cb.current.onUserMove?.());
     map.whenReady(reportView);
     mapRef.current = map;
     adapterRef.current = new OverlayAdapter(map, (id) => cb.current.onSelect(id));
