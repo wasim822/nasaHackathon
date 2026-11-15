@@ -61,6 +61,7 @@ describe('FirePopup', async () => {
   it('shows the timeline day at the latest report up to that day, and closes via ✕', () => {
     let closed = false;
     render(<FirePopup {...props(Date.UTC(2026, 8, 12))} onClose={() => (closed = true)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline day' }));
     const u = new URL(screen.getByRole('img').getAttribute('src')!);
     expect(u.searchParams.get('TIME')).toBe('2026-09-12');
     // Centred on the 09-10 report (the 09-14 one hadn't happened yet on 09-12).
@@ -69,6 +70,16 @@ describe('FirePopup', async () => {
     expect(u.searchParams.get('LAYERS')).toContain('Thermal_Anomalies');
     fireEvent.click(screen.getByRole('button', { name: 'Close satellite image' }));
     expect(closed).toBe(true);
+  });
+
+  it('opens on a before/after slider around the first report', () => {
+    render(<FirePopup {...props(Date.UTC(2026, 8, 12))} onClose={() => {}} />);
+    const imgs = screen.getAllByRole('img');
+    expect(imgs.map((i) => new URL(i.getAttribute('src')!).searchParams.get('TIME'))).toEqual(['2026-09-09', '2026-09-10']);
+    imgs.forEach((i) => fireEvent.load(i));
+    const slider = screen.getByRole('slider', { name: 'Compare before and after' });
+    fireEvent.change(slider, { target: { value: '20' } });
+    expect(imgs[1].style.clipPath).toBe('inset(0 0 0 20%)');
   });
 
   it('renders nothing for an unknown selection', () => {
