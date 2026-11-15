@@ -1,4 +1,4 @@
-import { parseCmrEntry, parsePolygon, parseTrack, selectPass, selectScenes, type NisarScene } from './nisar';
+import { parseCmrEntry, parsePolygon, parseTrack, groupPasses, pointInPolygon, scenesAt, type NisarScene } from './nisar';
 import { boundsFromKml, registerFromFootprint } from './nisarImage';
 
 const entry = {
@@ -41,50 +41,37 @@ describe('NISAR CMR parsing', () => {
   });
 });
 
-describe('selectScenes', () => {
-  const day = 864e5;
-  const mk = (id: string, stack: string, t: number): NisarScene => ({
-    id, stack, time: t, start: t, end: t, product: 'GCOV', status: 'Validated', footprint: [], track: 1, frame: 1,
-    direction: 'Ascending', browseUrl: '', kmlUrl: null, earthdataUrl: '',
-  });
-  const scenes = [mk('a1', 'A', 0), mk('a2', 'A', 12 * day), mk('b1', 'B', 5 * day), mk('c1', 'C', 40 * day)];
-  it('picks the nearest pass per stack within the window, never inventing scenes', () => {
-    const r = selectScenes(scenes, 10 * day, 7 * day, null);
-    expect(r.map((s) => s.id).sort()).toEqual(['a2', 'b1']);
-  });
-  it('always includes a pinned scene, replacing its stack', () => {
-    const r = selectScenes(scenes, 10 * day, 7 * day, 'c1');
-    expect(r[0].id).toBe('c1');
-    const r2 = selectScenes(scenes, 10 * day, 7 * day, 'a1');
-    expect(r2.map((s) => s.id).sort()).toEqual(['a1', 'b1']);
-  });
-  it('returns nothing when no pass is near the reference time', () => {
-    expect(selectScenes(scenes, 100 * day, 7 * day, null)).toEqual([]);
-  });
-});
-
-describe('selectPass (one clean strip)', () => {
+describe('groupPasses (one timeline frame per satellite pass)', () => {
   const day = 864e5;
   const min = 60_000;
-  const mk = (id: string, track: number, dir: 'Ascending' | 'Descending', t: number): NisarScene => ({
-    id, stack: `${track}-${dir}-${id}`, time: t, start: t, end: t + 30_000, product: 'GCOV', status: 'Validated', footprint: [],
-    track, frame: 1, direction: dir, browseUrl: '', kmlUrl: null, earthdataUrl: '',
+  const sq = (lat: number, lng: number): [number, number][] => [[lat, lng], [lat + 1, lng], [lat + 1, lng + 1], [lat, lng + 1], [lat, lng]];
+  const mk = (id: string, track: number, dir: 'Ascending' | 'Descending', t: number, frame = 1, status: 'Validated' | 'Provisional' = 'Validated', fp = sq(0, 0)): NisarScene => ({
+    id, stack: `${track}-${dir}-${frame}`, time: t, start: t, end: t + 30_000, product: 'GCOV', status, footprint: fp,
+    track, frame, direction: dir, browseUrl: '', kmlUrl: null, earthdataUrl: '',
   });
   const scenes = [
-    mk('p1', 10, 'Ascending', 3 * day),
-    mk('p2', 10, 'Ascending', 3 * day + 40_000), // next frame along the same pass
     mk('p3', 10, 'Ascending', 15 * day), // same track, next repeat cycle
-    mk('q1', 22, 'Descending', 4 * day), // different track, overlapping area
+    mk('p1', 10, 'Ascending', 3 * day, 1, 'Validated', sq(30, -90)),
+    mk('p2', 10, 'Ascending', 3 * day + 40_000, 2, 'Provisional', sq(31, -90)), // next frame along the same pass
+    mk('q1', 22, 'Descending', 4 * day),
     mk('q2', 10, 'Descending', 3 * day + 5 * min), // same track number, other direction
   ];
-  it('shows only the nearest pass and its adjacent frames', () => {
-    expect(selectPass(scenes, 3 * day, 7 * day, null).map((s) => s.id)).toEqual(['p1', 'p2']);
+  const passes = groupPasses(scenes);
+
+  it('joins adjoining frames of one pass and orders passes by real time', () => {
+    expect(passes.map((p) => p.scenes.map((s) => s.id))).toEqual([['p1', 'p2'], ['q2'], ['q1'], ['p3']]);
+    expect(passes[0].time).toBe(3 * day);
   });
-  it('follows a pinned scene', () => {
-    expect(selectPass(scenes, 3 * day, 7 * day, 'q1').map((s) => s.id)).toEqual(['q1']);
+  it('marks a pass provisional unless every frame is validated', () => {
+    expect(passes[0].status).toBe('Provisional');
+    expect(passes[1].status).toBe('Validated');
   });
-  it('returns nothing outside the window', () => {
-    expect(selectPass(scenes, 60 * day, 7 * day, null)).toEqual([]);
+  it('finds which pass and frame cover a clicked point, or none', () => {
+    const hit = scenesAt(passes, [31.5, -89.5]);
+    expect(hit.map((h) => h.scene.id)).toEqual(['p2']);
+    expect(scenesAt(passes, [45, 10])).toEqual([]);
+    expect(pointInPolygon([0.5, 0.5], sq(0, 0))).toBe(true);
+    expect(pointInPolygon([1.5, 0.5], sq(0, 0))).toBe(false);
   });
 });
 

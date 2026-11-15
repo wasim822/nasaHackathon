@@ -144,7 +144,14 @@ export class OverlayAdapter {
         const layer = L.circleMarker(s.center, {
           pane: s.pane, radius: s.radiusPx, color: s.color, fillColor: s.color, fillOpacity: s.fillOpacity, opacity: s.strokeOpacity ?? 1, weight: s.weight ?? 1, bubblingMouseEvents: false,
         });
-        if (s.tooltip) layer.bindTooltip(s.tooltip, { direction: 'top', offset: [0, -s.radiusPx], className: 'map-tip' });
+        if (s.tooltip) {
+          layer.bindTooltip(s.tooltip, {
+            direction: 'top', offset: [0, -s.radiusPx], className: s.tooltipPermanent ? 'map-tip locator-tip' : 'map-tip',
+            permanent: !!s.tooltipPermanent, interactive: !!(s.tooltipPermanent && s.selectId),
+          });
+          // A permanent label is part of the marker, so clicking it selects too.
+          if (s.tooltipPermanent) this.bindSelect(layer.getTooltip()!, s.selectId);
+        }
         layer.addTo(this.map);
         this.bindSelect(layer, s.selectId);
         if (s.pulse) this.pulse(s);

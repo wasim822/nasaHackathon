@@ -304,3 +304,40 @@ input[type='range'] { accent-color: var(--mint); }
 .cell-dot { position: absolute; top: 4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.35); }
 .cell-dot.current { box-shadow: 0 0 0 2px #fff; }
 .cell-strip-axis { display: flex; justify-content: space-between; margin: 0 2px; }
+
+/* Ground deformation detail */
+.signed-chart { width: 100%; display: block; overflow: visible; margin-top: 6px; }
+.legend-inline { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; color: var(--muted); }
+.legend-inline i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+/* Zoomed-out locator ring for compact study areas */
+.locator-tip { cursor: pointer; border-color: rgba(94, 234, 212, 0.55); color: #ccfbf1; font-weight: 500; }
+
+/* Wildfire satellite imagery (NASA GIBS snapshots) */
+.fire-imagery { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line-2); display: grid; gap: 7px; }
+.fire-img-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.fire-picks { display: flex; flex-wrap: wrap; gap: 5px; }
+.fire-picks .chip { display: grid; text-align: left; line-height: 1.25; padding: 4px 9px; border-radius: 8px; font-size: 11px; }
+.fire-picks .chip.active { border-color: var(--cyan); background: rgba(34, 211, 238, 0.12); }
+.fire-img-frame { position: relative; min-height: 120px; border-radius: 8px; overflow: hidden; background: #0b1220; border: 1px solid var(--line-2); }
+.fire-img-frame img { display: block; width: 100%; height: auto; transition: opacity 0.2s; }
+.fire-img-state { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--muted); text-align: center; padding: 8px; }
+.fire-img-pin { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid #fde68a; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); pointer-events: none; }
+.fire-img-nav { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.btn.small { padding: 3px 8px; font-size: 11.5px; }
+.fire-img-opts { grid-template-columns: 1fr 1fr; }
+.fire-img-opts .check { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; color: var(--text); }
+.reduce-motion .fire-img-frame img { transition: none; }
+
+/* Floating map popup (fire satellite image). Above timeline/sidebar, below the About drawer. */
+.map-popup {
+  position: absolute; z-index: 1080; top: 64px; left: 50%; transform: translateX(-50%);
+  width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - var(--timeline-h) - 88px); overflow: auto;
+  padding: 10px; border-radius: 12px; background: var(--panel-solid); border: 1px solid var(--line-2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); animation: popup-in 0.18s ease-out;
+}
+@keyframes popup-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.reduce-motion .map-popup { animation: none; }
+.fire-popup { display: grid; gap: 8px; }
+.fire-popup-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.fire-popup-note { margin: 0; }

@@ -1,0 +1,678 @@
+{
+ "aoi": "atchafalaya",
+ "name": "Atchafalaya Basin wetlands, Louisiana (USA)",
+ "grid": {
+  "z": 9,
+  "x0": 124,
+  "y0": 209,
+  "tilesX": 3,
+  "tilesY": 3,
+  "cellsPerTile": 128
+ },
+ "generated": "2026-11-15T03:24:14+00:00",
+ "range": {
+  "start": "2025-11-01",
+  "end": "2026-11-14"
+ },
+ "product": "NISAR L2 GCOV, frequency B (80 m), HH and HV backscatter",
+ "classes": {
+  "0": "no data",
+  "1": "other / not inundated",
+  "2": "open water",
+  "3": "possible inundated vegetation"
+ },
+ "method": "Each valid 80 m sample is water if HH backscatter (and HV, when it separates water from land on that pass) is below a threshold trained per pass on the pooled samples of its frames: the midpoint between the 25th percentile of samples in JRC persistent-water cells (occurrence >= 90%) and the 5th percentile of samples in never-water cells (0%), clamped HH (-20.0, -11.0) dB / HV (-28.0, -16.0) dB; passes whose water/land separation is < 2.0 dB are rejected. A ~0.55 km cell is water when >= 50% of its valid samples are water; cells with < 30% valid samples are no-data. Frames of one pass are mosaicked. Possible inundated vegetation (L-band double bounce): samples with HH >= -3.0 dB and HH-HV >= 7.0 dB; a cell is labelled so when >= 50% of its samples are. Cells bright in >= 90% of >= 5 passes are treated as persistent structures (urban, bridges) and excluded.",
+ "limitations": "Inundated-vegetation thresholds are fixed literature-style values, not trained on local ground truth; urban areas and other double-bounce structures can still be confused with flooded vegetation, and some flooded vegetation is not bright enough to be detected. Wind-roughened water can be missed; radar shadow and very smooth surfaces can be mistaken for water. Not validated against ground truth.",
+ "passes": [
+  {
+   "id": "2026-06-20_T084D",
+   "time": "2026-06-20T00:53:33.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_023_084_D_073_4005_DHDH_A_20260620T005333_20260620T005406_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_023_084_D_074_4005_DHDH_A_20260620T005405_20260620T005426_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9411,
+   "waterFraction": 0.0518,
+   "threshold_hh_db": -15.41,
+   "separation_hh_db": 6.42,
+   "threshold_hv_db": -21.47,
+   "separation_hv_db": 4.09,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.066
+  },
+  {
+   "id": "2026-06-21_T105A",
+   "time": "2026-06-21T11:18:41.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_023_105_A_016_4005_DHDH_A_20260621T111841_20260621T111907_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_023_105_A_017_4005_DHDH_A_20260621T111906_20260621T111941_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_023_105_A_018_4005_DHDH_A_20260621T111940_20260621T112015_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4811,
+   "waterFraction": 0.0134,
+   "threshold_hh_db": -12.78,
+   "separation_hh_db": 6.14,
+   "threshold_hv_db": -18.59,
+   "separation_hv_db": 4.27,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0285
+  },
+  {
+   "id": "2026-06-28_T033A",
+   "time": "2026-06-28T11:26:51.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_024_033_A_016_4005_DHDH_A_20260628T112651_20260628T112726_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_024_033_A_017_4005_DHDH_A_20260628T112725_20260628T112800_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8245,
+   "waterFraction": 0.0505,
+   "threshold_hh_db": -15.35,
+   "separation_hh_db": 5.55,
+   "threshold_hv_db": -22.2,
+   "separation_hv_db": 4.39,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0495
+  },
+  {
+   "id": "2026-07-02_T084D",
+   "time": "2026-07-02T00:53:32.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_024_084_D_073_4005_DHDH_A_20260702T005332_20260702T005406_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_024_084_D_074_4005_DHDH_A_20260702T005405_20260702T005425_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9409,
+   "waterFraction": 0.0503,
+   "threshold_hh_db": -15.5,
+   "separation_hh_db": 7.66,
+   "threshold_hv_db": -21.13,
+   "separation_hv_db": 5.11,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0352
+  },
+  {
+   "id": "2026-07-03_T105A",
+   "time": "2026-07-03T11:18:40.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_024_105_A_016_4005_DHDH_A_20260703T111840_20260703T111906_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_024_105_A_017_4005_DHDH_A_20260703T111905_20260703T111940_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_024_105_A_018_4005_DHDH_A_20260703T111939_20260703T112014_P05023_N_F_J_001"
+   ],
+   "coverage": 0.481,
+   "waterFraction": 0.0123,
+   "threshold_hh_db": -13.24,
+   "separation_hh_db": 5.86,
+   "threshold_hv_db": -18.96,
+   "separation_hv_db": 3.98,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0251
+  },
+  {
+   "id": "2026-07-10_T033A",
+   "time": "2026-07-10T11:26:51.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_025_033_A_016_4005_DHDH_A_20260710T112651_20260710T112725_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_025_033_A_017_4005_DHDH_A_20260710T112724_20260710T112759_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8241,
+   "waterFraction": 0.0531,
+   "threshold_hh_db": -15.08,
+   "separation_hh_db": 6.41,
+   "threshold_hv_db": -22.04,
+   "separation_hv_db": 4.98,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0419
+  },
+  {
+   "id": "2026-07-14_T084D",
+   "time": "2026-07-14T00:53:31.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_025_084_D_073_4005_DHDH_A_20260714T005331_20260714T005405_P05023_F_F_J_001",
+    "NISAR_L2_PR_GCOV_025_084_D_074_4005_DHDH_A_20260714T005404_20260714T005424_P05023_F_P_J_001"
+   ],
+   "coverage": 0.9409,
+   "waterFraction": 0.0496,
+   "threshold_hh_db": -15.82,
+   "separation_hh_db": 9.48,
+   "threshold_hv_db": -20.9,
+   "separation_hv_db": 5.86,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0369
+  },
+  {
+   "id": "2026-07-15_T105A",
+   "time": "2026-07-15T11:18:39.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_025_105_A_016_4005_DHDH_A_20260715T111839_20260715T111906_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_025_105_A_017_4005_DHDH_A_20260715T111905_20260715T111940_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4807,
+   "waterFraction": 0.0128,
+   "threshold_hh_db": -12.96,
+   "separation_hh_db": 6.13,
+   "threshold_hv_db": -18.83,
+   "separation_hv_db": 4.19,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0309
+  },
+  {
+   "id": "2026-07-22_T033A",
+   "time": "2026-07-22T11:26:50.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_026_033_A_016_4005_DHDH_A_20260722T112650_20260722T112725_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_026_033_A_017_4005_DHDH_A_20260722T112724_20260722T112758_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8241,
+   "waterFraction": 0.0522,
+   "threshold_hh_db": -15.02,
+   "separation_hh_db": 6.31,
+   "threshold_hv_db": -21.87,
+   "separation_hv_db": 4.95,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0341
+  },
+  {
+   "id": "2026-07-26_T084D",
+   "time": "2026-07-26T00:53:31.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_026_084_D_073_4005_DHDH_A_20260726T005331_20260726T005404_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_026_084_D_074_4005_DHDH_A_20260726T005403_20260726T005424_P05023_N_P_J_001"
+   ],
+   "coverage": 0.941,
+   "waterFraction": 0.0503,
+   "threshold_hh_db": -15.73,
+   "separation_hh_db": 5.91,
+   "threshold_hv_db": -21.33,
+   "separation_hv_db": 4.03,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0303
+  },
+  {
+   "id": "2026-07-27_T105A",
+   "time": "2026-07-27T11:18:39.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_026_105_A_016_4005_DHDH_A_20260727T111839_20260727T111905_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_026_105_A_017_4005_DHDH_A_20260727T111904_20260727T111939_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_026_105_A_018_4005_DHDH_A_20260727T111938_20260727T112013_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4808,
+   "waterFraction": 0.011,
+   "threshold_hh_db": -13.6,
+   "separation_hh_db": 4.71,
+   "threshold_hv_db": -19.12,
+   "separation_hv_db": 3.27,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0208
+  },
+  {
+   "id": "2026-08-15_T033A",
+   "time": "2026-08-15T11:26:49.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_028_033_A_016_4005_DHDH_A_20260815T112649_20260815T112723_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_028_033_A_017_4005_DHDH_A_20260815T112722_20260815T112757_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8242,
+   "waterFraction": 0.0497,
+   "threshold_hh_db": -15.73,
+   "separation_hh_db": 5.5,
+   "threshold_hv_db": -22.24,
+   "separation_hv_db": 4.42,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0155
+  },
+  {
+   "id": "2026-08-19_T084D",
+   "time": "2026-08-19T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_028_084_D_073_4005_DHDH_A_20260819T005330_20260819T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_028_084_D_074_4005_DHDH_A_20260819T005402_20260819T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9411,
+   "waterFraction": 0.0456,
+   "threshold_hh_db": -15.91,
+   "separation_hh_db": 5.55,
+   "threshold_hv_db": -21.51,
+   "separation_hv_db": 3.89,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.009
+  },
+  {
+   "id": "2026-08-20_T105A",
+   "time": "2026-08-20T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_028_105_A_016_4005_DHDH_A_20260820T111838_20260820T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_028_105_A_017_4005_DHDH_A_20260820T111903_20260820T111938_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_028_105_A_018_4005_DHDH_A_20260820T111937_20260820T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4811,
+   "waterFraction": 0.0113,
+   "threshold_hh_db": -14.26,
+   "separation_hh_db": 4.45,
+   "threshold_hv_db": -19.44,
+   "separation_hv_db": 2.81,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0047
+  },
+  {
+   "id": "2026-08-27_T033A",
+   "time": "2026-08-27T11:26:49.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_029_033_A_016_4005_DHDH_A_20260827T112649_20260827T112723_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_029_033_A_017_4005_DHDH_A_20260827T112722_20260827T112757_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8244,
+   "waterFraction": 0.0509,
+   "threshold_hh_db": -14.68,
+   "separation_hh_db": 5.96,
+   "threshold_hv_db": -21.4,
+   "separation_hv_db": 4.95,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0105
+  },
+  {
+   "id": "2026-08-31_T084D",
+   "time": "2026-08-31T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_029_084_D_073_4005_DHDH_A_20260831T005330_20260831T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_029_084_D_074_4005_DHDH_A_20260831T005402_20260831T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9409,
+   "waterFraction": 0.0471,
+   "threshold_hh_db": -15.64,
+   "separation_hh_db": 5.34,
+   "threshold_hv_db": -21.59,
+   "separation_hv_db": 3.81,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0103
+  },
+  {
+   "id": "2026-09-01_T105A",
+   "time": "2026-09-01T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_029_105_A_016_4005_DHDH_A_20260901T111838_20260901T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_029_105_A_017_4005_DHDH_A_20260901T111903_20260901T111937_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_029_105_A_018_4005_DHDH_A_20260901T111936_20260901T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4812,
+   "waterFraction": 0.0141,
+   "threshold_hh_db": -13.41,
+   "separation_hh_db": 5.02,
+   "threshold_hv_db": -18.98,
+   "separation_hv_db": 3.38,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0099
+  },
+  {
+   "id": "2026-09-08_T033A",
+   "time": "2026-09-08T11:26:48.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_030_033_A_016_4005_DHDH_A_20260908T112648_20260908T112723_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_030_033_A_017_4005_DHDH_A_20260908T112722_20260908T112757_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8242,
+   "waterFraction": 0.0513,
+   "threshold_hh_db": -15.4,
+   "separation_hh_db": 7.1,
+   "threshold_hv_db": -21.84,
+   "separation_hv_db": 5.36,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0125
+  },
+  {
+   "id": "2026-09-12_T084D",
+   "time": "2026-09-12T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_030_084_D_073_4005_DHDH_A_20260912T005330_20260912T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_030_084_D_074_4005_DHDH_A_20260912T005402_20260912T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9409,
+   "waterFraction": 0.0472,
+   "threshold_hh_db": -15.54,
+   "separation_hh_db": 6.14,
+   "threshold_hv_db": -21.3,
+   "separation_hv_db": 4.23,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0096
+  },
+  {
+   "id": "2026-09-13_T105A",
+   "time": "2026-09-13T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_030_105_A_016_4005_DHDH_A_20260913T111838_20260913T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_030_105_A_017_4005_DHDH_A_20260913T111903_20260913T111937_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_030_105_A_018_4005_DHDH_A_20260913T111936_20260913T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4808,
+   "waterFraction": 0.0138,
+   "threshold_hh_db": -13.7,
+   "separation_hh_db": 5.56,
+   "threshold_hv_db": -19.0,
+   "separation_hv_db": 3.53,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0065
+  },
+  {
+   "id": "2026-09-20_T033A",
+   "time": "2026-09-20T11:26:48.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_031_033_A_016_4005_DHDH_A_20260920T112648_20260920T112723_P05023_F_F_J_001",
+    "NISAR_L2_PR_GCOV_031_033_A_017_4005_DHDH_A_20260920T112722_20260920T112757_P05023_F_F_J_001"
+   ],
+   "coverage": 0.8241,
+   "waterFraction": 0.0383,
+   "threshold_hh_db": -17.64,
+   "separation_hh_db": 8.22,
+   "threshold_hv_db": -22.66,
+   "separation_hv_db": 4.48,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0101
+  },
+  {
+   "id": "2026-09-24_T084D",
+   "time": "2026-09-24T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_031_084_D_073_4005_DHDH_A_20260924T005330_20260924T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_031_084_D_074_4005_DHDH_A_20260924T005402_20260924T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.941,
+   "waterFraction": 0.0448,
+   "threshold_hh_db": -16.17,
+   "separation_hh_db": 5.72,
+   "threshold_hv_db": -21.81,
+   "separation_hv_db": 3.91,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0077
+  },
+  {
+   "id": "2026-09-25_T105A",
+   "time": "2026-09-25T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_031_105_A_016_4005_DHDH_A_20260925T111838_20260925T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_031_105_A_017_4005_DHDH_A_20260925T111903_20260925T111937_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_031_105_A_018_4005_DHDH_A_20260925T111936_20260925T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4809,
+   "waterFraction": 0.0125,
+   "threshold_hh_db": -13.89,
+   "separation_hh_db": 4.54,
+   "threshold_hv_db": -19.2,
+   "separation_hv_db": 3.02,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0053
+  },
+  {
+   "id": "2026-10-02_T033A",
+   "time": "2026-10-02T11:26:48.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_032_033_A_016_4005_DHDH_A_20261002T112648_20261002T112723_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_032_033_A_017_4005_DHDH_A_20261002T112722_20261002T112757_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8242,
+   "waterFraction": 0.0489,
+   "threshold_hh_db": -15.89,
+   "separation_hh_db": 5.51,
+   "threshold_hv_db": -22.36,
+   "separation_hv_db": 4.31,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0119
+  },
+  {
+   "id": "2026-10-06_T084D",
+   "time": "2026-10-06T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_032_084_D_073_4005_DHDH_A_20261006T005330_20261006T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_032_084_D_074_4005_DHDH_A_20261006T005402_20261006T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9409,
+   "waterFraction": 0.0502,
+   "threshold_hh_db": -15.53,
+   "separation_hh_db": 6.2,
+   "threshold_hv_db": -21.48,
+   "separation_hv_db": 4.27,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0226
+  },
+  {
+   "id": "2026-10-07_T105A",
+   "time": "2026-10-07T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_032_105_A_016_4005_DHDH_A_20261007T111838_20261007T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_032_105_A_017_4005_DHDH_A_20261007T111903_20261007T111937_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_032_105_A_018_4005_DHDH_A_20261007T111936_20261007T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4811,
+   "waterFraction": 0.0135,
+   "threshold_hh_db": -13.37,
+   "separation_hh_db": 5.04,
+   "threshold_hv_db": -18.88,
+   "separation_hv_db": 3.39,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0161
+  },
+  {
+   "id": "2026-10-14_T033A",
+   "time": "2026-10-14T11:26:49.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_033_033_A_016_4005_DHDH_A_20261014T112649_20261014T112723_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_033_033_A_017_4005_DHDH_A_20261014T112722_20261014T112757_P05023_N_F_J_001"
+   ],
+   "coverage": 0.8242,
+   "waterFraction": 0.0418,
+   "threshold_hh_db": -16.18,
+   "separation_hh_db": 4.7,
+   "threshold_hv_db": -22.57,
+   "separation_hv_db": 3.83,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0183
+  },
+  {
+   "id": "2026-10-18_T084D",
+   "time": "2026-10-18T00:53:30.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_033_084_D_073_4005_DHDH_A_20261018T005330_20261018T005403_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_033_084_D_074_4005_DHDH_A_20261018T005402_20261018T005423_P05023_N_P_J_001"
+   ],
+   "coverage": 0.9411,
+   "waterFraction": 0.0422,
+   "threshold_hh_db": -15.93,
+   "separation_hh_db": 4.74,
+   "threshold_hv_db": -21.77,
+   "separation_hv_db": 3.42,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0156
+  },
+  {
+   "id": "2026-10-19_T105A",
+   "time": "2026-10-19T11:18:38.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Provisional",
+   "granules": [
+    "NISAR_L2_PR_GCOV_033_105_A_016_4005_DHDH_A_20261019T111838_20261019T111904_P05023_N_P_J_001",
+    "NISAR_L2_PR_GCOV_033_105_A_017_4005_DHDH_A_20261019T111903_20261019T111937_P05023_N_F_J_001",
+    "NISAR_L2_PR_GCOV_033_105_A_018_4005_DHDH_A_20261019T111936_20261019T112011_P05023_N_F_J_001"
+   ],
+   "coverage": 0.4809,
+   "waterFraction": 0.0107,
+   "threshold_hh_db": -14.02,
+   "separation_hh_db": 3.88,
+   "threshold_hv_db": -19.36,
+   "separation_hv_db": 2.56,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0114
+  },
+  {
+   "id": "2026-10-26_T033A",
+   "time": "2026-10-26T11:26:49.000Z",
+   "track": 33,
+   "direction": "Ascending",
+   "status": "Validated",
+   "granules": [
+    "NISAR_L2_PR_GCOV_034_033_A_016_4005_DHDH_A_20261026T112649_20261026T112723_P05036_N_F_J_001",
+    "NISAR_L2_PR_GCOV_034_033_A_017_4005_DHDH_A_20261026T112722_20261026T112757_P05036_N_F_J_001"
+   ],
+   "coverage": 0.8242,
+   "waterFraction": 0.0435,
+   "threshold_hh_db": -16.66,
+   "separation_hh_db": 4.45,
+   "threshold_hv_db": -22.61,
+   "separation_hv_db": 3.66,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0048
+  },
+  {
+   "id": "2026-10-30_T084D",
+   "time": "2026-10-30T00:53:31.000Z",
+   "track": 84,
+   "direction": "Descending",
+   "status": "Validated",
+   "granules": [
+    "NISAR_L2_PR_GCOV_034_084_D_073_4005_DHDH_A_20261030T005331_20261030T005400_P05036_N_F_J_001",
+    "NISAR_L2_PR_GCOV_034_084_D_074_4005_DHDH_A_20261030T005403_20261030T005424_P05036_N_P_J_001"
+   ],
+   "coverage": 0.8626,
+   "waterFraction": 0.0307,
+   "threshold_hh_db": -16.96,
+   "separation_hh_db": 5.2,
+   "threshold_hv_db": -22.56,
+   "separation_hv_db": 3.72,
+   "channels": "HH+HV",
+   "frames": 2,
+   "inundatedVegFraction": 0.0157
+  },
+  {
+   "id": "2026-10-31_T105A",
+   "time": "2026-10-31T11:18:39.000Z",
+   "track": 105,
+   "direction": "Ascending",
+   "status": "Validated",
+   "granules": [
+    "NISAR_L2_PR_GCOV_034_105_A_016_4005_DHDH_A_20261031T111839_20261031T111904_P05036_N_P_J_001",
+    "NISAR_L2_PR_GCOV_034_105_A_017_4005_DHDH_A_20261031T111903_20261031T111938_P05036_N_F_J_001",
+    "NISAR_L2_PR_GCOV_034_105_A_018_4005_DHDH_A_20261031T111937_20261031T112011_P05036_N_F_J_001"
+   ],
+   "coverage": 0.4811,
+   "waterFraction": 0.01,
+   "threshold_hh_db": -14.36,
+   "separation_hh_db": 3.5,
+   "threshold_hv_db": -19.77,
+   "separation_hv_db": 2.41,
+   "channels": "HH+HV",
+   "frames": 3,
+   "inundatedVegFraction": 0.0146
+  }
+ ]
+}

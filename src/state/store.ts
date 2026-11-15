@@ -5,6 +5,7 @@ import { stepIndex, type Speed } from '../services/playback';
 
 export type LoadState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 export type BaseLayerId = 'satellite' | 'satellite-muted';
+export type NisarStripMode = 'build' | 'single';
 
 export const EFFECT_PRESETS: Record<EffectMode, EffectSettings> = {
   off: {
@@ -76,18 +77,17 @@ export interface AppState {
   nisarEnabled: boolean;
   nisarProduct: NisarProduct;
   nisarOpacity: number;
-  /** 'pass' = one clean satellite pass; 'all' = nearest pass of every track. */
-  nisarMode: 'pass' | 'all';
+  /** Strip playback: 'build' keeps earlier passes (dimmed) to show coverage filling in; 'single' shows only the current pass. */
+  nisarMode: NisarStripMode;
   /** Backscatter display: grayscale (conventional) or the browse false-colour composite. */
   nisarColor: 'gray' | 'color';
-  nisarPinnedId: string | null;
-
   // actions
   activateFilter(id: string | null, range: TimeRange | null, layers: Record<string, boolean>, options: unknown): void;
   setRange(range: TimeRange): void;
   setFilterOptions(id: string, options: unknown): void;
   beginLoad(): void;
-  finishLoad(observations: Observation[], data: unknown, notices: string[]): void;
+  /** `keepTime`: start at the observation nearest this time instead of the first (e.g. after a re-search). */
+  finishLoad(observations: Observation[], data: unknown, notices: string[], keepTime?: number | null): void;
   failLoad(message: string): void;
 
   setIndex(index: number): void;
@@ -116,9 +116,8 @@ export interface AppState {
   setNisarEnabled(v: boolean): void;
   setNisarProduct(p: NisarProduct): void;
   setNisarOpacity(v: number): void;
-  setNisarMode(m: 'pass' | 'all'): void;
+  setNisarMode(m: NisarStripMode): void;
   setNisarColor(c: 'gray' | 'color'): void;
-  pinNisar(id: string | null): void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -149,12 +148,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   fitTarget: null,
   viewBounds: null,
   viewZoom: 3,
-  nisarEnabled: true,
+  nisarEnabled: false,
   nisarProduct: 'GCOV',
   nisarOpacity: 0.8,
-  nisarMode: 'pass',
+  nisarMode: 'build',
   nisarColor: 'gray',
-  nisarPinnedId: null,
 
   activateFilter(id, range, layers, options) {
     const { filterOptions } = get();
@@ -183,8 +181,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   beginLoad() {
     set({ loadState: 'loading', loadError: null, playing: false });
   },
-  finishLoad(observations, data, notices) {
+  finishLoad(observations, data, notices, keepTime = null) {
     const sorted = [...observations].sort((a, b) => a.time - b.time);
+    let start = 0;
+    if (keepTime != null) {
+      for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].time - keepTime) < Math.abs(sorted[start].time - keepTime)) start = i;
+    }
     set((s) => {
       // Keep the selection only if it still exists conceptually; filters decide in Detail.
       return {
@@ -192,7 +194,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         data,
         notices,
         loadState: sorted.length ? 'ready' : 'empty',
-        currentIndex: sorted.length ? 0 : -1,
+        currentIndex: sorted.length ? start : -1,
         playing: false,
         selectedId: sorted.length ? s.selectedId : null,
       };
@@ -286,7 +288,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ nisarEnabled: v });
   },
   setNisarProduct(p) {
-    set({ nisarProduct: p, nisarPinnedId: null });
+    set({ nisarProduct: p });
   },
   setNisarOpacity(v) {
     set({ nisarOpacity: v });
@@ -296,9 +298,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setNisarColor(c) {
     set({ nisarColor: c });
-  },
-  pinNisar(id) {
-    set({ nisarPinnedId: id });
   },
 }));
 

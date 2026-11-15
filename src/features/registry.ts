@@ -32,7 +32,10 @@ export const FILTERS: FilterDefinition<any, any>[] = [
   comingSoon('glacier', 'Glacier Movement', '🧊', 'Ice-velocity / displacement from SAR feature tracking (e.g. Alaska, Canadian Arctic). Needs a measured velocity product with uncertainty.'),
   wetlandFilter,
   comingSoon('vegetation', 'Forest & Vegetation', '🌲', 'Biomass and disturbance change from L-band backscatter.'),
-  comingSoon('deformation', 'Ground Deformation', '📐', 'InSAR surface displacement (subsidence, volcanoes, post-seismic).'),
+  // Real-data module exists (features/deformation) but is held back: the processed SJV pairs show
+  // implausibly large single-pair motion (p95 34–122 mm per 12 days), likely an unwrapping /
+  // connected-component referencing problem in server/nisar_prep.py. Re-enable once validated.
+  comingSoon('deformation', 'Ground Deformation', '📐', 'InSAR surface displacement (subsidence, volcanoes, post-seismic). Real NISAR GUNW pipeline is built but held back until its processing is validated.'),
 ];
 
 export function getFilter(id: string | null): FilterDefinition<any, any> | null {

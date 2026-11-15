@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapView } from './components/map/MapView';
+import { LOCATOR_SELECT_ID, locatorOverlay } from './components/map/locator';
 import { Timeline } from './components/timeline/Timeline';
 import { FilterSidebar } from './components/layout/FilterSidebar';
 import { EffectsPanel, LayerList, StatsPanel } from './components/layout/FilterPanel';
@@ -7,9 +8,24 @@ import { AboutDrawer } from './components/layout/AboutDrawer';
 import { FILTERS, getFilter } from './features/registry';
 import { selectReducedMotion, useAppStore } from './state/store';
 import { frameDelayMs, transitionMs } from './services/playback';
-import type { FrameContext, LatLng, OverlaySpec } from './types';
-import { useNisar } from './hooks/useNisar';
+import type { FrameContext, LatLng, Observation, OverlaySpec } from './types';
+import { sceneDateText, useNisar } from './hooks/useNisar';
 import { NisarPanel } from './components/layout/NisarPanel';
+import { NisarPopup, type NisarPopupContent } from './components/layout/NisarPopup';
+import { type NisarPass, scenesAt } from './services/data/nisar';
+
+/** One timeline frame per real NISAR pass. */
+function passObservation(p: NisarPass): Observation {
+  return {
+    id: p.id,
+    time: p.time,
+    kind: 'observed',
+    label: `NISAR ${p.product} · ${p.direction ?? ''} T${p.track ?? '?'} · ${p.scenes.length} frame${p.scenes.length > 1 ? 's' : ''}`,
+    quality: { Status: p.status, Orbit: `${p.direction ?? '—'} · track ${p.track ?? '?'}`, Acquired: sceneDateText(p), Frames: String(p.scenes.length) },
+  };
+}
+
+type PopupState = { kind: 'filter'; id: string } | { kind: 'nisar'; content: NisarPopupContent };
 
 export default function App() {
   const s = useAppStore();
@@ -17,8 +33,11 @@ export default function App() {
   const [now] = useState(() => Date.now());
   const filter = getFilter(s.activeFilterId);
   const options = filter ? (s.filterOptions[filter.id] ?? filter.defaultOptions) : null;
-  // With no filter the timeline still shows its ten-tick ruler over a default window.
-  const [idleRange, setIdleRange] = useState(() => ({ start: now - 30 * 864e5, end: now }));
+  // With no filter the timeline still shows its ten-tick ruler over a default window
+  // (long enough to hold several NISAR passes, since products publish weeks after acquisition).
+  const [idleRange, setIdleRange] = useState(() => ({ start: now - 45 * 864e5, end: now }));
+  // On the base map, NISAR passes over the view drive the shared timeline.
+  const stripMode = !filter && s.nisarEnabled;
   const timelineRange = s.range ?? idleRange;
 
   // System reduced-motion preference.
@@ -99,47 +118,111 @@ export default function App() {
   const chart = useMemo(() => (filter?.chart && ready ? filter.chart(s.data, s.observations) : null), [filter, ready, s.data, s.observations]);
   const extent = useMemo(() => (filter?.extent && s.data != null ? filter.extent(s.data) : null), [filter, s.data]);
 
-  // Real NISAR imagery, independent of the active filter.
-  const refTime =
-    s.observations[s.currentIndex]?.time ?? (s.range ? s.range.end : timelineRange.end);
+  // Real NISAR passes over the view (base map only): each pass is a timeline frame drawn as a strip.
   const nisar = useNisar({
-    enabled: s.nisarEnabled,
+    enabled: stripMode,
     product: s.nisarProduct,
     view: s.viewBounds,
     zoom: s.viewZoom,
     range: timelineRange,
-    refTime,
-    pinnedId: s.nisarPinnedId,
-    opacity: s.nisarOpacity,
+    index: stripMode ? s.currentIndex : -1,
     mode: s.nisarMode,
+    opacity: s.nisarOpacity,
   });
-  const allOverlays = useMemo(() => [...nisar.overlays, ...overlays], [nisar.overlays, overlays]);
-  const nisarMarkers = useMemo(
-    () => nisar.scenes.map((sc) => ({ id: sc.id, time: sc.time, label: `${sc.product} ${sc.status} · ${sc.direction ?? ''} T${sc.track ?? '?'}`, active: nisar.visible.some((v) => v.id === sc.id) })),
-    [nisar.scenes, nisar.visible],
+  // Feed passes into the shared timeline/playback state (filters own it otherwise).
+  useEffect(() => {
+    if (!stripMode) return;
+    const st = useAppStore.getState();
+    if (nisar.state === 'loading') st.beginLoad();
+    else if (nisar.state === 'error') st.failLoad(`NISAR search failed: ${nisar.error}`);
+    else if (nisar.state === 'ready') {
+      // Keep the same moment when the view changes and the passes are re-searched.
+      const keep = st.observations[st.currentIndex]?.time ?? null;
+      st.finishLoad(nisar.passes.map(passObservation), nisar.passes, [], keep);
+    }
+  }, [stripMode, nisar.state, nisar.passes, nisar.error]);
+  // Turning NISAR off on the base map clears its frames.
+  const wasStrip = useRef(false);
+  useEffect(() => {
+    if (wasStrip.current && !stripMode && !useAppStore.getState().activeFilterId) useAppStore.getState().activateFilter(null, null, {}, null);
+    wasStrip.current = stripMode;
+  }, [stripMode]);
+  const locator = useMemo(
+    () => (filter ? locatorOverlay(extent, s.viewZoom, filter.label, reducedMotion) : null),
+    [filter, extent, s.viewZoom, reducedMotion],
   );
+  const allOverlays = useMemo(() => [...nisar.overlays, ...overlays, ...(locator ? [locator] : [])], [nisar.overlays, overlays, locator]);
   const onOverlaySelect = useCallback((id: string) => {
-    if (id.startsWith('nisar:')) {
-      const sid = id.slice(6);
-      useAppStore.getState().pinNisar(useAppStore.getState().nisarPinnedId === sid ? null : sid);
-      useAppStore.getState().setSidebarOpen(true);
-    } else useAppStore.getState().select(id);
+    if (id === LOCATOR_SELECT_ID) {
+      useAppStore.getState().requestFit(null); // null → fit the active filter's data extent
+    } else {
+      useAppStore.getState().select(id);
+      setPopup({ kind: 'filter', id }); // shown only if the active filter defines a Popup
+    }
+  }, []);
+
+  // Floating map popup (a fire's satellite image, a NISAR strip): closes on map drag/zoom, outside click, Escape.
+  const [popup, setPopup] = useState<PopupState | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const closePopup = useCallback(() => setPopup(null), []);
+  useEffect(() => {
+    if (!popup) return;
+    const down = (e: PointerEvent) => {
+      if (!popupRef.current?.contains(e.target as Node)) setPopup(null);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPopup(null);
+    };
+    document.addEventListener('pointerdown', down);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', down);
+      document.removeEventListener('keydown', key);
+    };
+  }, [popup]);
+  // Switching filters or turning NISAR off closes any popup.
+  useEffect(() => setPopup(null), [s.activeFilterId, stripMode]);
+
+  const goToPass = useCallback((index: number) => {
+    useAppStore.getState().setPlaying(false);
+    useAppStore.getState().setIndex(index);
+    setPopup(null);
   }, []);
 
   const onMapClick = useCallback(
     (at: LatLng) => {
+      setPopup(null);
+      if (stripMode) {
+        // Topmost strip on screen under the click: the current pass, then earlier ones (build-up), newest first.
+        const idx = useAppStore.getState().currentIndex;
+        const passes = nisar.passes;
+        if (idx < 0 || !passes[idx]) return;
+        const shown = s.nisarMode === 'build' ? passes.slice(0, idx + 1) : [passes[idx]];
+        const hit = scenesAt([...shown].reverse(), at)[0];
+        if (hit) {
+          setPopup({ kind: 'nisar', content: { kind: 'scene', pass: hit.pass, scene: hit.scene, isCurrent: hit.pass === passes[idx] } });
+        } else {
+          const shownIds = new Set(shown.map((p) => p.id));
+          const elsewhere = scenesAt(passes, at)
+            .filter((h) => !shownIds.has(h.pass.id))
+            .map((h) => ({ pass: h.pass, index: passes.indexOf(h.pass) }));
+          setPopup({ kind: 'nisar', content: { kind: 'none', at, range: timelineRange, elsewhere } });
+        }
+        return;
+      }
       if (!filter?.hitTest || !frameCtx) {
         if (useAppStore.getState().selectedId) useAppStore.getState().select(null);
         return;
       }
       useAppStore.getState().select(filter.hitTest(frameCtx, at));
     },
-    [filter, frameCtx],
+    [filter, frameCtx, stripMode, nisar.passes, s.nisarMode, timelineRange],
   );
 
   const closeAbout = useCallback(() => useAppStore.getState().closeAbout(), []);
   const Detail = filter?.Detail;
   const Options = filter?.Options;
+  const Popup = filter?.Popup;
 
   return (
     <div className={`app ${reducedMotion ? 'reduce-motion' : ''} ${s.sidebarOpen ? 'sidebar-open' : ''} ${s.nisarProduct === 'GCOV' && s.nisarColor === 'gray' ? 'radar-gray' : ''}`}>
@@ -154,7 +237,19 @@ export default function App() {
         onSelect={onOverlaySelect}
         onMapClick={onMapClick}
         onViewChange={(b, z) => useAppStore.getState().setView(b, z)}
+        onUserMove={closePopup}
       />
+
+      {popup?.kind === 'filter' && Popup && frameCtx && popup.id === s.selectedId && (
+        <div ref={popupRef} className="map-popup" role="dialog" aria-label={`${filter!.label} satellite image`}>
+          <Popup {...frameCtx} onClose={closePopup} />
+        </div>
+      )}
+      {popup?.kind === 'nisar' && stripMode && (
+        <div ref={popupRef} className="map-popup" role="dialog" aria-label={popup.content.kind === 'scene' ? 'NISAR radar image' : 'No NISAR data here'}>
+          <NisarPopup content={popup.content} onClose={closePopup} onGoTo={goToPass} />
+        </div>
+      )}
 
       <FilterSidebar
         filters={FILTERS}
@@ -264,33 +359,28 @@ export default function App() {
             </section>
           </div>
         )}
-        <NisarPanel
-          enabled={s.nisarEnabled}
-          product={s.nisarProduct}
-          opacity={s.nisarOpacity}
-          state={nisar.state}
-          error={nisar.error}
-          scenes={nisar.scenes}
-          visible={nisar.visible}
-          fallback={nisar.fallback}
-          mode={s.nisarMode}
-          color={s.nisarColor}
-          onMode={s.setNisarMode}
-          onColor={s.setNisarColor}
-          truncated={nisar.truncated}
-          pinnedId={s.nisarPinnedId}
-          refTime={refTime}
-          imageStatus={nisar.imageStatus}
-          onEnabled={s.setNisarEnabled}
-          onProduct={s.setNisarProduct}
-          onOpacity={s.setNisarOpacity}
-          onPin={s.pinNisar}
-          onZoomTo={(sc) => {
-            const lats = sc.footprint.map((p) => p[0]);
-            const lngs = sc.footprint.map((p) => p[1]);
-            s.requestFit({ south: Math.min(...lats), north: Math.max(...lats), west: Math.min(...lngs), east: Math.max(...lngs) });
-          }}
-        />
+        {!filter && (
+          <NisarPanel
+            enabled={s.nisarEnabled}
+            product={s.nisarProduct}
+            opacity={s.nisarOpacity}
+            state={nisar.state}
+            error={nisar.error}
+            passes={nisar.passes}
+            currentIndex={stripMode ? s.currentIndex : -1}
+            mode={s.nisarMode}
+            color={s.nisarColor}
+            onMode={s.setNisarMode}
+            onColor={s.setNisarColor}
+            truncated={nisar.truncated}
+            zoomedIn={nisar.zoomedIn}
+            imageStatus={nisar.imageStatus}
+            onEnabled={s.setNisarEnabled}
+            onProduct={s.setNisarProduct}
+            onOpacity={s.setNisarOpacity}
+            onGoTo={goToPass}
+          />
+        )}
       </FilterSidebar>
 
       <button className="hamburger" onClick={() => (s.aboutOpen ? s.closeAbout() : s.openAbout(filter?.missionId))} aria-label="About the satellite" aria-expanded={s.aboutOpen}>
@@ -318,10 +408,8 @@ export default function App() {
         loadState={s.loadState}
         events={events}
         chart={chart}
-        cadenceMs={filter?.expectedCadenceMs}
-        filterActive={!!filter}
-        secondaryMarkers={s.nisarEnabled ? nisarMarkers : []}
-        onSecondaryClick={(id) => s.pinNisar(s.nisarPinnedId === id ? null : id)}
+        cadenceMs={filter ? filter.expectedCadenceMs : stripMode ? 12 * 864e5 : undefined}
+        filterActive={!!filter || stripMode}
         onRangeChange={(r) => (filter ? s.setRange(r) : setIdleRange(r))}
         onIndex={s.setIndex}
         onStep={s.step}
