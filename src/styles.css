@@ -347,3 +347,16 @@ input[type='range'] { accent-color: var(--mint); }
 .fire-popup { display: grid; gap: 8px; }
 .fire-popup-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .fire-popup-note { margin: 0; }
+
+/* Before/after wipe slider in the fire popup: the range input covers the image so you can drag anywhere. */
+.fire-compare-after { position: absolute; inset: 0; height: 100% !important; }
+.fire-compare input[type='range'] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.fire-compare-divider { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); pointer-events: none; }
+.fire-compare-divider::after {
+  content: '◀ ▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 3px 6px; border-radius: 999px;
+  background: #fff; color: #0b1220; font-size: 9px; white-space: nowrap;
+}
+.fire-compare input[type='range']:focus-visible + .fire-compare-divider { background: var(--cyan); }
+.fire-compare-tag { position: absolute; top: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(11, 18, 32, 0.75); color: var(--text); font-size: 11px; pointer-events: none; }
+.fire-compare-tag.left { left: 6px; }
+.fire-compare-tag.right { right: 6px; }
