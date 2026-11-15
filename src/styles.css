@@ -78,7 +78,7 @@ a { color: var(--cyan); }
 .sidebar-open .sidebar-toggle { left: calc(var(--sidebar-w) + 18px); }
 .brand { display: flex; gap: 10px; align-items: center; padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
 .brand h1 { margin: 0; font-size: 16px; letter-spacing: 0.01em; }
-.brand-mark { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 35%, #67e8f9, #0e7490 70%); color: #04131a; font-weight: 700; }
+.brand-mark { width: 34px; height: 34px; object-fit: contain; flex: none; }
 .filter-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .filter-item {
   display: flex; align-items: center; gap: 6px; padding: 7px 8px; min-height: 36px; text-align: left;

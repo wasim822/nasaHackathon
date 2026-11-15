@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '../Icon';
 import type { FilterDefinition } from '../../types';
 import type { LoadState } from '../../state/store';
+import logo from '../../orbit.png';
 import { REGION_NAME } from '../../services/geospatial/region';
 
 export interface FilterSidebarProps {
@@ -25,9 +26,9 @@ export function FilterSidebar({ filters, activeId, open, onToggleOpen, onSelect,
       </button>
       <nav id="filter-sidebar" className={`sidebar ${open ? 'open' : ''}`} aria-label="Data filters">
         <header className="brand">
-          <div className="brand-mark" aria-hidden><Icon name="globe" size={18} /></div>
+          <img className="brand-mark" src={logo} alt="" aria-hidden />
           <div>
-            <h1>Earth Change Explorer</h1>
+            <h1>Orb-it</h1>
             <div className="muted small">{`Watch Earth change · ${REGION_NAME}`}</div>
           </div>
         </header>

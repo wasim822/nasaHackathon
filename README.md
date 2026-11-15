@@ -1,4 +1,4 @@
-# Earth Change Explorer
+# Orb-it
 
 NASA Space Apps Challenge 2026: **Dancing with the SARs**. This interactive satellite map lets you *watch Earth change over time* across the **United States & Canada**.
 
