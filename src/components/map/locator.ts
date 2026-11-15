@@ -14,6 +14,18 @@ export function spanPx(bounds: GeoBounds, zoom: number): number {
 }
 
 /**
+ * Whether to move the map to a filter's data when it loads: only for compact study areas that
+ * would otherwise be off-screen or a speck. Otherwise the user's view is kept.
+ */
+export function shouldAutoFit(extent: GeoBounds | null, view: GeoBounds | null, zoom: number): boolean {
+  if (!extent) return false;
+  if (extent.east - extent.west > MAX_SPAN_DEG || extent.north - extent.south > MAX_SPAN_DEG) return false;
+  if (!view) return true;
+  const visible = extent.west < view.east && extent.east > view.west && extent.south < view.north && extent.north > view.south;
+  return !visible || spanPx(extent, zoom) < LOCATOR_MIN_PX;
+}
+
+/**
  * A ring marking where a filter's data is when the map is zoomed out so far that the data
  * itself is too small to notice. It's a navigation aid only: it marks the processed area,
  * not a detected hazard.

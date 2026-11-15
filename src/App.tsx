@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapView } from './components/map/MapView';
-import { LOCATOR_SELECT_ID, locatorOverlay } from './components/map/locator';
+import { LOCATOR_SELECT_ID, locatorOverlay, shouldAutoFit } from './components/map/locator';
 import { Timeline } from './components/timeline/Timeline';
 import { FilterSidebar } from './components/layout/FilterSidebar';
 import { EffectsPanel, LayerList, StatsPanel } from './components/layout/FilterPanel';
@@ -128,6 +128,16 @@ export default function App() {
   );
   const chart = useMemo(() => (filter?.chart && ready ? filter.chart(s.data, s.observations) : null), [filter, ready, s.data, s.observations]);
   const extent = useMemo(() => (filter?.extent && s.data != null ? filter.extent(s.data) : null), [filter, s.data]);
+  // When a filter's (new) data area loads, go there if it would otherwise be off-screen or a speck.
+  // Keyed by the area itself, so frame changes never move the map; a different area (e.g. another
+  // data source) does.
+  const extentKey = extent ? `${filter?.id}|${extent.south},${extent.west},${extent.north},${extent.east}` : '';
+  useEffect(() => {
+    if (!extentKey) return;
+    const st = useAppStore.getState();
+    if (shouldAutoFit(extent, st.viewBounds, st.viewZoom)) st.requestFit(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extentKey]);
 
   // Real NISAR passes over the view (base map only): each pass is a timeline frame drawn as a strip.
   const nisar = useNisar({
@@ -190,6 +200,8 @@ export default function App() {
       useAppStore.getState().requestFit(null); // null → fit the active filter's data extent
     } else {
       useAppStore.getState().select(id);
+      // Opening a filter's popup pauses playback so the card and map hold still.
+      if (getFilter(useAppStore.getState().activeFilterId)?.Popup) useAppStore.getState().setPlaying(false);
       setPopup({ kind: 'filter', id }); // shown only if the active filter defines a Popup
     }
   }, []);
@@ -216,6 +228,11 @@ export default function App() {
   // Switching filters or turning NISAR off closes any popup.
   useEffect(() => setPopup(null), [s.activeFilterId, stripMode]);
 
+  /** Show an observation (pauses playback) without closing an open popup. */
+  const showFrame = useCallback((index: number) => {
+    useAppStore.getState().setPlaying(false);
+    useAppStore.getState().setIndex(index);
+  }, []);
   const goToIndex = useCallback((index: number) => {
     useAppStore.getState().setPlaying(false);
     useAppStore.getState().setIndex(index);
@@ -252,7 +269,12 @@ export default function App() {
         if (useAppStore.getState().selectedId) useAppStore.getState().select(null);
         return;
       }
-      useAppStore.getState().select(filter.hitTest(frameCtx, at));
+      const hit = filter.hitTest(frameCtx, at);
+      useAppStore.getState().select(hit);
+      if (hit && filter.Popup) {
+        useAppStore.getState().setPlaying(false);
+        setPopup({ kind: 'filter', id: hit });
+      }
     },
     [filter, frameCtx, stripMode, nisar, s.nisarMode, timelineRange],
   );
@@ -281,7 +303,7 @@ export default function App() {
 
       {popup?.kind === 'filter' && Popup && frameCtx && popup.id === s.selectedId && (
         <div ref={popupRef} className="map-popup" role="dialog" aria-label={`${filter!.label} satellite image`}>
-          <Popup {...frameCtx} onClose={closePopup} />
+          <Popup {...frameCtx} onClose={closePopup} onIndex={showFrame} />
         </div>
       )}
       {popup?.kind === 'nisar' && stripMode && (
@@ -346,7 +368,7 @@ export default function App() {
             ))}
 
             {Detail && frameCtx && s.selectedId && (
-              <Detail {...frameCtx} onClose={() => s.select(null)} />
+              <Detail {...frameCtx} onClose={() => s.select(null)} onIndex={showFrame} />
             )}
 
             {stats.length > 0 && (

@@ -38,7 +38,7 @@ export interface NisarFloodManifest {
 }
 
 /** Data folders written by server/flood_prep.py. */
-export type NisarDataset = 'nisar-flood' | 'nisar-wetland';
+export type NisarDataset = 'nisar-flood' | 'nisar-wetland' | 'opera-flood';
 
 export const datasetUrl = (dataset: NisarDataset, aoi: string, file: string) =>
   `${import.meta.env.BASE_URL ?? '/'}data/${dataset}/${aoi}/${file}`;

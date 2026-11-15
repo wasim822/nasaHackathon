@@ -102,7 +102,7 @@ describe('flood pipeline (demo scenes, synthetic baseline)', () => {
       return Promise.reject(new Error('offline'));
     }) as typeof fetch;
     try {
-      const r = await floodFilter.load({ range: { start: Date.UTC(2026, 5, 1), end: Date.UTC(2026, 10, 14) }, options: DEFAULT_FLOOD_OPTIONS, signal: new AbortController().signal });
+      const r = await floodFilter.load({ range: { start: Date.UTC(2026, 5, 1), end: Date.UTC(2026, 10, 14) }, options: { ...DEFAULT_FLOOD_OPTIONS, source: 'nisar' }, signal: new AbortController().signal });
       expect(r.observations).toHaveLength(1);
       expect(r.observations[0]).toMatchObject({ kind: 'observed', time: Date.parse('2026-06-26T11:12:27Z') });
       expect(r.observations[0].quality?.['HH water threshold']).toBe('-14.2 dB');
@@ -162,5 +162,33 @@ describe('tracking effects never alter science', () => {
     const lat = (g.latEdges[r] + g.latEdges[r + 1]) / 2;
     const lng = g.west + ((c + 0.5) * (g.east - g.west)) / g.cols;
     expect(floodFilter.hitTest!(ctx(idx, 'clean'), [lat, lng])).toBe(b.trackId);
+  });
+});
+
+describe('real Sentinel-1 flood source (NASA OPERA DSWx-S1, April 2025) — default', () => {
+  it('is the default and loads the processed passes from disk as observed frames that show the flood', async () => {
+    // Node's fs, loaded by name so the browser-only tsconfig needs no Node types.
+    const fsName = 'node:fs';
+    const { readFileSync } = await import(/* @vite-ignore */ fsName);
+    const dir = `${(globalThis as unknown as { process: { cwd(): string } }).process.cwd()}/public/data/opera-flood/bootheel25/`;
+    expect(DEFAULT_FLOOD_OPTIONS.source).toBe('opera');
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((url: string) => {
+      const file = String(url).split('/opera-flood/bootheel25/')[1];
+      if (file) return Promise.resolve(new Response(readFileSync(dir + file), { headers: { 'content-type': file.endsWith('.json') ? 'application/json' : 'application/octet-stream' } }));
+      return Promise.reject(new Error('offline')); // JRC tiles → explicit synthetic baseline
+    }) as typeof fetch;
+    try {
+      const r = await floodFilter.load({ range: { start: Date.UTC(2025, 2, 15), end: Date.UTC(2025, 4, 15, 23, 59) }, options: DEFAULT_FLOOD_OPTIONS, signal: new AbortController().signal });
+      expect(r.data.source).toBe('opera');
+      expect(r.observations.length).toBe(10);
+      expect(r.observations.every((o) => o.kind === 'observed' && o.label?.includes('Sentinel-1'))).toBe(true);
+      expect(r.notices[0]).toContain('not NISAR');
+      // The flood peak (10 Apr) has more potential-flood area than the week before it.
+      const at = (iso: string) => r.data.frames.find((f) => new Date(f.obs.time).toISOString().startsWith(iso))!;
+      expect(at('2025-04-10').floodKm2).toBeGreaterThan(at('2025-03-29').floodKm2 * 2);
+    } finally {
+      globalThis.fetch = orig;
+    }
   });
 });

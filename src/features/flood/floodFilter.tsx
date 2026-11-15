@@ -14,6 +14,8 @@ import { TimeSeriesChart } from '../../components/charts/TimeSeriesChart';
 import { AOI, JRC_OCCURRENCE_TILES, loadBaseline, type WaterBaseline } from './baseline';
 import { DEMO_DEFAULT_RANGE, DEMO_SCENES } from './demoScenario';
 import { loadManifest, loadPassScenes } from './nisarFlood';
+import { OPERA_AOI, OPERA_DEFAULT_RANGE, OPERA_FIRST, loadOperaManifest, loadOperaScenes } from './operaFlood';
+import { FloodPopup, SOURCE_TEXT } from './FloodPopup';
 import {
   DEFAULT_FLOOD_OPTIONS,
   type DemoTerrain,
@@ -205,7 +207,7 @@ function FloodDetail({ data, index, selectedId, onClose }: DetailProps<FloodData
       <header className="detail-head">
         <div>
           <div className="detail-id">{selectedId}</div>
-          <div className="muted small">Potential flood region · DEMO data</div>
+          <div className="muted small">{`Potential flood region · ${SOURCE_TEXT[data.source]}`}</div>
         </div>
         <button className="icon-btn" onClick={onClose} aria-label="Close region details">✕</button>
       </header>
@@ -253,7 +255,9 @@ function FloodDetail({ data, index, selectedId, onClose }: DetailProps<FloodData
         <dd className="muted">
           {data.source === 'nisar'
             ? `No per-pixel confidence. Pass quality: ${Object.entries(frame?.obs.quality ?? {}).filter(([k]) => k.includes('threshold') || k.includes('contrast')).map(([k, v]) => `${k} ${v}`).join(' · ') || '—'}`
-            : 'Not available (demo classification has no confidence model)'}
+            : data.source === 'opera'
+              ? 'Not shown: OPERA publishes a per-pixel confidence layer (B03_CONF) that this app does not load yet'
+              : 'Not available (demo classification has no confidence model)'}
         </dd>
       </dl>
       <div className="detail-chart">
@@ -283,10 +287,11 @@ function FloodOptionsPanel({ options, onChange, onRange }: OptionsProps<FloodOpt
           onChange={(e) => {
             const source = e.target.value as FloodOptions['source'];
             onChange({ ...options, source });
-            onRange?.(source === 'demo' ? { ...DEMO_DEFAULT_RANGE } : { ...NISAR_DEFAULT_RANGE });
+            onRange?.(source === 'demo' ? { ...DEMO_DEFAULT_RANGE } : source === 'opera' ? { ...OPERA_DEFAULT_RANGE } : { ...NISAR_DEFAULT_RANGE });
           }}
         >
-          <option value="nisar">Real NISAR L-band (GCOV water classification)</option>
+          <option value="opera">Real Sentinel-1 water maps (NASA OPERA) · April 2025 floods</option>
+          <option value="nisar">Real NISAR L-band (GCOV water classification) · St. Louis 2026</option>
           <option value="demo">Demo (simulated scenes)</option>
         </select>
       </label>
@@ -317,8 +322,8 @@ export const floodFilter: FilterDefinition<FloodData, FloodOptions> = {
   id: 'flood',
   label: 'Flood',
   icon: 'waves',
-  status: 'demo',
-  summary: `Potential flooding vs. historical surface water — ${AOI.name}. Water is classified from real NISAR L-band radar passes (or simulated demo scenes, selectable in Options).`,
+  status: 'live',
+  summary: `Potential flooding vs. historical surface water. Default: real Sentinel-1 radar water maps (NASA OPERA) of the April 2025 Mississippi–Ohio valley floods — ${OPERA_AOI.name}. Options: real NISAR passes (${AOI.name}, 2026) or simulated demo scenes.`,
   missionId: 'nisar',
   supportsTracking: true,
   effectControls: ['boundingBoxes', 'trackingIds', 'trails', 'centroids', 'trailLength', 'highlightSelected', 'highlightChanges'],
@@ -331,16 +336,19 @@ export const floodFilter: FilterDefinition<FloodData, FloodOptions> = {
     { id: 'jrc-occurrence', label: 'JRC water occurrence (raw)', description: 'Full-resolution historical occurrence tiles: pink = rarely water, blue = always water.', provenance: 'reference', defaultVisible: false, swatch: 'linear-gradient(90deg,#ffcccc,#0000ff)' },
   ],
   sourceAttribution: [
+    { name: 'NASA OPERA DSWx-S1 (Sentinel-1)', url: 'https://www.jpl.nasa.gov/go/opera/products/dswx-product-suite/', type: 'Satellite SAR water maps (Sentinel-1 C-band, 30 m) — default source', detail: 'Surface water classified by NASA/JPL OPERA from ESA Sentinel-1 radar; aggregated to ~0.55 km cells by server/opera_prep.py. Data from NASA PO.DAAC. Copernicus Sentinel data, ESA.' },
     { name: 'NASA–ISRO SAR (NISAR) L2 GCOV', url: 'https://nisar-docs.asf.alaska.edu/gcov/', type: 'Satellite SAR observations (L-band, 80 m)', detail: 'Water classified per pass from HH/HV backscatter by server/flood_prep.py; thresholds trained per pass against JRC reference water. Data from ASF DAAC.' },
     { name: 'JRC Global Surface Water v1.4 (Pekel et al., 2016)', url: 'https://global-surface-water.appspot.com/', type: 'Historical water reference (Landsat 1984–2021)' },
     { name: 'Demo SAR water scenes (simulated)', type: 'Synthetic observations — only when "Demo" is selected', detail: 'Simulated timestamps, coverage and water masks for exercising the pipeline.', isDemo: true },
   ],
   defaultOptions: DEFAULT_FLOOD_OPTIONS,
-  defaultRange: (now) => ({ start: NISAR_DEFAULT_RANGE.start, end: Math.min(now, NISAR_DEFAULT_RANGE.end) }),
-  dataBounds: (now) => ({ start: Date.UTC(2026, 2, 1), end: now }),
+  defaultRange: (now) => ({ start: OPERA_DEFAULT_RANGE.start, end: Math.min(now, OPERA_DEFAULT_RANGE.end) }),
+  dataBounds: (now) => ({ start: OPERA_FIRST, end: now }),
 
   async load({ range, options, signal }) {
-    const baseline = await loadBaseline(signal);
+    // Each real source covers its own area; the demo reuses the St. Louis area.
+    const aoi = options.source === 'opera' ? OPERA_AOI : AOI;
+    const baseline = await loadBaseline(signal, aoi);
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     const notices = [baseline.note];
     if (baseline.source === 'synthetic') notices.push('Baseline is SYNTHETIC — persistent water will not line up with real rivers.');
@@ -348,7 +356,17 @@ export const floodFilter: FilterDefinition<FloodData, FloodOptions> = {
 
     let scenes;
     let extra: Pick<FloodData, 'source' | 'method' | 'limitations'>;
-    if (options.source === 'nisar') {
+    if (options.source === 'opera') {
+      const manifest = await loadOperaManifest(signal);
+      scenes = await loadOperaScenes(manifest, range, cells, signal);
+      extra = { source: 'opera', method: manifest.method, limitations: manifest.limitations };
+      notices.unshift(
+        `Real Sentinel-1 water maps (NASA OPERA DSWx-S1), processed ${manifest.generated.slice(0, 10)}: ${manifest.passes.length} passes, ${manifest.range.start} → ${manifest.range.end}. Sentinel-1, not NISAR — these floods predate NISAR's launch. Each pass images part of the area; changes are compared only over area imaged by both passes.`,
+      );
+      if (!scenes.length && manifest.passes.length) {
+        notices.push(`No processed passes in this range. Available: ${manifest.passes[0].time.slice(0, 10)} → ${manifest.passes[manifest.passes.length - 1].time.slice(0, 10)}.`);
+      }
+    } else if (options.source === 'nisar') {
       const manifest = await loadManifest('stl', signal);
       scenes = await loadPassScenes(manifest, range, cells, signal);
       extra = { source: 'nisar', method: manifest.method, limitations: manifest.limitations };
@@ -392,6 +410,7 @@ export const floodFilter: FilterDefinition<FloodData, FloodOptions> = {
   },
   extent: (data) => data.bounds,
   Detail: FloodDetail,
+  Popup: FloodPopup,
   Options: FloodOptionsPanel,
   dispose() {
     resultCache.clear();

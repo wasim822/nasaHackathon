@@ -18,11 +18,11 @@ export interface FloodOptions {
   permanentThreshold: number;
   /** Connected regions smaller than this many cells are removed as noise. */
   minBlobCells: number;
-  /** 'nisar' = real NISAR-derived water maps; 'demo' = simulated scenes. */
-  source: 'nisar' | 'demo';
+  /** 'opera' = real Sentinel-1 water maps (NASA OPERA DSWx-S1); 'nisar' = real NISAR-derived water maps; 'demo' = simulated scenes. */
+  source: 'opera' | 'nisar' | 'demo';
 }
 
-export const DEFAULT_FLOOD_OPTIONS: FloodOptions = { permanentThreshold: 50, minBlobCells: 16, source: 'nisar' };
+export const DEFAULT_FLOOD_OPTIONS: FloodOptions = { permanentThreshold: 50, minBlobCells: 16, source: 'opera' };
 
 export interface FloodFrame {
   obs: Observation;
@@ -84,7 +84,7 @@ export interface FloodData {
   /** Observation with the highest flood share of imaged land (coverage-independent). */
   maxExtent: { index: number; km2: number; share: number };
   options: FloodOptions;
-  source: 'nisar' | 'demo';
+  source: 'opera' | 'nisar' | 'demo';
   /** Plain-language description of how water was classified (real data). */
   method?: string;
   limitations?: string;

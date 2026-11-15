@@ -3,6 +3,18 @@
 The Flood filter's **Real NISAR** mode is built from actual NISAR L2 GCOV radar products.
 This folder holds the script that turns them into small water maps the web app loads.
 
+## Default flood data: Sentinel-1 (NASA OPERA DSWx-S1)
+
+```bash
+server/.venv/Scripts/python -m pip install tifffile
+server/.venv/Scripts/python server/opera_prep.py --start 2025-03-15 --end 2025-05-15
+```
+
+Downloads the 30 m water layer (`B01_WTR`, ~300 KB per tile) of every DSWx-S1 tile over the
+Missouri Bootheel / NE Arkansas area from NASA PO.DAAC (same Earthdata token), combines tiles of the
+same Sentinel-1 pass, and writes `public/data/opera-flood/bootheel25/`. Open water and inundated
+vegetation count as water; layover/shadow and unimaged areas are no data.
+
 ## One-time setup
 
 ```bash
