@@ -24,6 +24,8 @@ export interface TimelineProps {
   chart: ChartSeries | null;
   cadenceMs?: number;
   filterActive: boolean;
+  /** Short note shown in the status line when nothing more important is (e.g. "Loading NISAR images…"). */
+  statusNote?: string;
   /** Extra real acquisitions (e.g. NISAR scenes) shown as markers; not playback frames. */
   secondaryMarkers?: { id: string; time: number; label: string; active: boolean }[];
   onSecondaryClick?(id: string): void;
@@ -131,6 +133,7 @@ export function Timeline(p: TimelineProps) {
   else if (p.loadState === 'loading') statusText = 'Loading observations…';
   else if (p.loadState === 'error') statusText = 'Could not load observations';
   else if (p.loadState === 'empty') statusText = 'No observations in this date range';
+  else if (p.statusNote) statusText = p.statusNote;
 
   return (
     <footer className="timeline" aria-label="Timeline and playback">

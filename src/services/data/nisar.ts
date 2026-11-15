@@ -1,4 +1,5 @@
 import type { GeoBounds, LatLng, TimeRange } from '../../types';
+import { REGION_BOXES, isInRegion } from '../geospatial/region';
 
 /**
  * Real NISAR products, discovered through NASA's Common Metadata Repository (CMR).
@@ -47,6 +48,8 @@ export interface NisarScene {
   /** Repeat-pass stack key (track + direction + frame). */
   stack: string;
   browseUrl: string;
+  /** ~100 px version of the same browse image (same geometry), for fast playback. */
+  thumbUrl: string | null;
   kmlUrl: string | null;
   earthdataUrl: string;
 }
@@ -98,6 +101,7 @@ export function parseCmrEntry(e: CmrEntry, product: NisarProduct, status: NisarS
     ...t,
     stack: `${t.track ?? '?'}-${t.direction ?? '?'}-${t.frame ?? '?'}`,
     browseUrl,
+    thumbUrl: https.find((h) => h.includes('/BROWSE/') && h.endsWith('_LATLON_thumbnail.png')) ?? null,
     kmlUrl: https.find((h) => h.includes('/BROWSE/') && h.endsWith('_LATLON.kml')) ?? null,
     earthdataUrl: `https://search.earthdata.nasa.gov/search/granules?p=${encodeURIComponent(e.collection_concept_id)}&q=${encodeURIComponent(e.title)}`,
   };
@@ -118,9 +122,7 @@ export async function searchNisar(product: NisarProduct, bounds: GeoBounds, rang
   const temporal = `${new Date(range.start).toISOString()},${new Date(range.end).toISOString()}`;
   const results = await Promise.all(
     NISAR_PRODUCTS[product].collections.map(async ({ shortName, status }) => {
-      const scenes: NisarScene[] = [];
-      let hits = 0;
-      for (let page = 1; page <= maxPages; page++) {
+      const fetchPage = async (page: number) => {
         const params = new URLSearchParams({
           short_name: shortName,
           bounding_box: `${b.west},${b.south},${b.east},${b.north}`,
@@ -131,11 +133,15 @@ export async function searchNisar(product: NisarProduct, bounds: GeoBounds, rang
         });
         const res = await fetch(`${CMR}?${params}`, { signal });
         if (!res.ok) throw new Error(`NASA CMR search failed (HTTP ${res.status})`);
-        hits = Number(res.headers.get('CMR-Hits') ?? '0');
         const json = (await res.json()) as { feed: { entry: CmrEntry[] } };
-        scenes.push(...json.feed.entry.map((e) => parseCmrEntry(e, product, status)).filter((x): x is NisarScene => !!x));
-        if (json.feed.entry.length < NISAR_PAGE_SIZE || page * NISAR_PAGE_SIZE >= hits) break;
-      }
+        return { hits: Number(res.headers.get('CMR-Hits') ?? '0'), scenes: json.feed.entry.map((e) => parseCmrEntry(e, product, status)).filter((x): x is NisarScene => !!x) };
+      };
+      // The first page gives the total; the remaining pages are fetched in parallel.
+      const first = await fetchPage(1);
+      const hits = first.hits;
+      const pages = Math.min(maxPages, Math.ceil(hits / NISAR_PAGE_SIZE));
+      const rest = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, i) => fetchPage(i + 2)));
+      const scenes = [first, ...rest].flatMap((r) => r.scenes);
       // Newest first, so truncation drops the oldest products.
       return { scenes, truncated: hits > maxPages * NISAR_PAGE_SIZE };
     }),
@@ -224,4 +230,69 @@ export function scenesAt(passes: NisarPass[], at: LatLng): { pass: NisarPass; sc
     if (scene) out.push({ pass, scene });
   }
   return out;
+}
+
+/** Pages per region box (150 each, fetched in parallel): a full week is ~1,600 products in the largest box. */
+const REGION_MAX_PAGES = 20;
+
+/**
+ * NISAR products over the app region (US & Canada), whatever the map shows. Frames that
+ * don't touch the region (e.g. the ocean or Mexico ends of a pass) are dropped.
+ */
+export async function searchNisarRegion(product: NisarProduct, range: TimeRange, signal: AbortSignal): Promise<NisarSearchResult> {
+  const results = await Promise.all(REGION_BOXES.map((b) => searchNisar(product, b, range, signal, REGION_MAX_PAGES)));
+  const byId = new Map<string, NisarScene>();
+  // Frames at or across the antimeridian (western Aleutians) are left out: they would stretch a
+  // pass's camera view and image placement around the whole globe.
+  for (const sc of results.flatMap((r) => r.scenes)) if (touchesRegion(sc.footprint) && sc.footprint.every(([, lng]) => lng < 0)) byId.set(sc.id, sc);
+  return { scenes: [...byId.values()].sort((a, b) => a.time - b.time), truncated: results.some((r) => r.truncated) };
+}
+
+export function touchesRegion(footprint: LatLng[]): boolean {
+  if (!footprint.length) return false;
+  const c: LatLng = [footprint.reduce((t, p) => t + p[0], 0) / footprint.length, footprint.reduce((t, p) => t + p[1], 0) / footprint.length];
+  return isInRegion(c) || footprint.some(isInRegion);
+}
+
+/**
+ * Frame numbers missing between a pass's first and last frame: not in NASA's catalog
+ * (not yet published, or not recorded). Frames beyond either end can't be known and aren't counted.
+ */
+export function missingFrames(pass: NisarPass): number[] {
+  const have = new Set(pass.scenes.map((s) => s.frame).filter((f): f is number => f != null));
+  if (!have.size) return [];
+  const out: number[] = [];
+  for (let f = Math.min(...have) + 1; f < Math.max(...have); f++) if (!have.has(f)) out.push(f);
+  return out;
+}
+
+/** One frame of a pass, as a step for satellite follow mode. */
+export interface NisarFrameStep {
+  scene: NisarScene;
+  passIndex: number;
+}
+
+/**
+ * Every frame of every pass in acquisition order (the order the satellite imaged them).
+ * A frame number that appears twice in a pass (duplicate products) is stepped through once.
+ */
+export function flattenFrames(passes: NisarPass[]): NisarFrameStep[] {
+  const out: NisarFrameStep[] = [];
+  passes.forEach((pass, passIndex) => {
+    const seen = new Set<number | null>();
+    for (const scene of [...pass.scenes].sort((x, y) => x.start - y.start)) {
+      if (scene.frame != null && seen.has(scene.frame)) continue;
+      seen.add(scene.frame);
+      out.push({ scene, passIndex });
+    }
+  });
+  return out;
+}
+
+/** Bounding box of all frames in a pass, or of one frame (for the camera). */
+export function passBounds(pass: { scenes: NisarScene[] }): GeoBounds {
+  const pts = pass.scenes.flatMap((s) => s.footprint);
+  const lats = pts.map((p) => p[0]);
+  const lngs = pts.map((p) => p[1]);
+  return { south: Math.min(...lats), north: Math.max(...lats), west: Math.min(...lngs), east: Math.max(...lngs) };
 }

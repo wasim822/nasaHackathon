@@ -118,6 +118,8 @@ export interface TileOverlay extends OverlayBase {
   attribution: string;
   opacity: number;
   maxNativeZoom?: number;
+  /** Request tiles from a WMS endpoint (`url`) instead of a {z}/{x}/{y} template. */
+  wms?: { layers: string; params?: Record<string, string> };
 }
 
 export interface ImageOverlay extends OverlayBase {
@@ -260,6 +262,8 @@ export interface FilterDefinition<TData = unknown, TOptions = unknown> {
   /** Optional floating card over the map, opened by clicking a map item; closes on map drag/zoom or outside click. */
   Popup?: ComponentType<DetailProps<TData, TOptions>>;
   Options?: ComponentType<OptionsProps<TOptions>>;
+  /** Lazily loaded extras (e.g. a day's smoke map) call `onChange` when they arrive so overlays redraw. */
+  subscribe?(onChange: () => void): () => void;
   /** Release caches / object URLs when deactivated. */
   dispose?(): void;
 }

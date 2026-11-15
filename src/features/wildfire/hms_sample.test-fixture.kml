@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<Placemark><description><![CDATA[<div style="width:170px;">Start Time: 2026289 1200UTC<br>End Time: 2026289 1500UTC<br>Density: Light<br>Satellite: GOES-WEST</div>]]></description>
+<styleUrl>#Smoke_Light_style</styleUrl>
+<Polygon>
+  <tessellate>1</tessellate>
+  <gx:drawOrder>0</gx:drawOrder>
+  <outerBoundaryIs>
+    <LinearRing>
+      <coordinates>
+-82.220549,29.103904,0
+-82.247549,29.110904,0
+-82.267549,29.115904,0
+-82.285549,29.117904,0
+-82.297549,29.114904,0
+-82.299549,29.111904,0
+</coordinates>
+    </LinearRing>
+  </outerBoundaryIs>
+</Polygon>
+</Placemark>
+<Placemark><description><![CDATA[<div style="width:170px;">Start Time: 2026289 1200UTC<br>End Time: 2026289 1500UTC<br>Density: Heavy<br>Satellite: GOES-WEST</div>]]></description>
+<styleUrl>#Smoke_Heavy_style</styleUrl>
+<Polygon>
+  <tessellate>1</tessellate>
+  <gx:drawOrder>2</gx:drawOrder>
+  <outerBoundaryIs>
+    <LinearRing>
+      <coordinates>
+-82.258549,29.044904,0
+-82.234549,29.015904,0
+-82.202549,28.978904,0
+-82.192549,28.953904,0
+-82.181549,28.935904,0
+-82.169549,28.928904,0
+</coordinates>
+    </LinearRing>
+  </outerBoundaryIs>
+</Polygon>
+</Placemark>
+</Document></kml>

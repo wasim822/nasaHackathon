@@ -5,7 +5,8 @@ import { stepIndex, type Speed } from '../services/playback';
 
 export type LoadState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 export type BaseLayerId = 'satellite' | 'satellite-muted';
-export type NisarStripMode = 'build' | 'single';
+/** NISAR timeline steps: whole passes, or one image (frame) at a time as the satellite imaged them. */
+export type NisarMode = 'pass' | 'satellite';
 
 export const EFFECT_PRESETS: Record<EffectMode, EffectSettings> = {
   off: {
@@ -77,8 +78,9 @@ export interface AppState {
   nisarEnabled: boolean;
   nisarProduct: NisarProduct;
   nisarOpacity: number;
-  /** Strip playback: 'build' keeps earlier passes (dimmed) to show coverage filling in; 'single' shows only the current pass. */
-  nisarMode: NisarStripMode;
+  /** Move the camera to each NISAR pass as the timeline advances. Dragging the map turns it off. */
+  nisarFollow: boolean;
+  nisarMode: NisarMode;
   /** Backscatter display: grayscale (conventional) or the browse false-colour composite. */
   nisarColor: 'gray' | 'color';
   // actions
@@ -116,7 +118,8 @@ export interface AppState {
   setNisarEnabled(v: boolean): void;
   setNisarProduct(p: NisarProduct): void;
   setNisarOpacity(v: number): void;
-  setNisarMode(m: NisarStripMode): void;
+  setNisarFollow(v: boolean): void;
+  setNisarMode(m: NisarMode): void;
   setNisarColor(c: 'gray' | 'color'): void;
 }
 
@@ -151,7 +154,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   nisarEnabled: false,
   nisarProduct: 'GCOV',
   nisarOpacity: 0.8,
-  nisarMode: 'build',
+  nisarFollow: true,
+  nisarMode: 'pass',
   nisarColor: 'gray',
 
   activateFilter(id, range, layers, options) {
@@ -293,8 +297,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setNisarOpacity(v) {
     set({ nisarOpacity: v });
   },
+  setNisarFollow(v) {
+    set({ nisarFollow: v });
+  },
   setNisarMode(m) {
-    set({ nisarMode: m });
+    // Switching modes pauses and re-enables following so the camera picks up the new steps.
+    set({ nisarMode: m, playing: false, nisarFollow: true });
   },
   setNisarColor(c) {
     set({ nisarColor: c });

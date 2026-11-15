@@ -60,3 +60,21 @@ describe('OverlayAdapter', () => {
     map.remove();
   });
 });
+
+describe('OverlayAdapter WMS tiles', () => {
+  it('requests WMS tiles with the layer and day for daily satellite layers', () => {
+    const map = makeMap();
+    const a = new OverlayAdapter(map, () => {});
+    a.update([{ kind: 'tile', id: 'hs', pane: 'data', url: 'https://gibs.example/wms.cgi', attribution: 'x', opacity: 1, wms: { layers: 'VIIRS_NOAA20_Thermal_Anomalies_375m_All', params: { time: '2026-10-16' } } }], 0);
+    let wms: L.TileLayer.WMS | undefined;
+    map.eachLayer((l) => {
+      if (l instanceof L.TileLayer.WMS) wms = l;
+    });
+    expect(wms).toBeDefined();
+    const coords = Object.assign(L.point(5, 12), { z: 5 }) as L.Coords;
+    const url = wms!.getTileUrl(coords);
+    expect(url).toContain('LAYERS=VIIRS_NOAA20_Thermal_Anomalies_375m_All');
+    expect(url).toContain('TIME=2026-10-16');
+    expect(url).toContain('CRS=EPSG%3A3857');
+  });
+});

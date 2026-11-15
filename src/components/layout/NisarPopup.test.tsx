@@ -5,7 +5,7 @@ import { groupPasses, type NisarScene } from '../../services/data/nisar';
 
 const scene = (id: string, t: number): NisarScene => ({
   id, stack: `76-Ascending-21`, time: t, start: t, end: t + 38_000, product: 'GCOV', status: 'Validated', footprint: [[38, -91], [39, -91], [39, -90], [38, -90]],
-  track: 76, frame: 21, direction: 'Ascending', browseUrl: `https://example.test/${id}_LATLON.png`, kmlUrl: null, earthdataUrl: 'https://search.earthdata.nasa.gov/x',
+  track: 76, frame: 21, direction: 'Ascending', browseUrl: `https://example.test/${id}_LATLON.png`, thumbUrl: null, kmlUrl: null, earthdataUrl: 'https://search.earthdata.nasa.gov/x',
 });
 const passes = groupPasses([scene('a', Date.UTC(2026, 9, 17, 11, 4)), scene('b', Date.UTC(2026, 9, 29, 11, 4))]);
 

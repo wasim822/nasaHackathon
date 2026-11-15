@@ -88,9 +88,9 @@ export interface ProcessedImage {
  * Downloads a browse PNG, georegisters it, makes the black background transparent and
  * resamples rows from lat/lon to Web-Mercator so it overlays exactly on the map.
  */
-export async function processSceneImage(scene: NisarScene, signal: AbortSignal): Promise<ProcessedImage> {
+export async function processSceneImage(scene: NisarScene, signal: AbortSignal, url = scene.browseUrl): Promise<ProcessedImage> {
   const [blob, kml] = await Promise.all([
-    fetch(scene.browseUrl, { signal }).then((r) => {
+    fetch(url, { signal }).then((r) => {
       if (!r.ok) throw new Error(`Browse image HTTP ${r.status}`);
       return r.blob();
     }),

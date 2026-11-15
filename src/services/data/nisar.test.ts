@@ -26,6 +26,7 @@ describe('NISAR CMR parsing', () => {
     const s = parseCmrEntry(entry, 'GCOV', 'Provisional')!;
     expect(s.time).toBe(Date.parse('2026-06-19T11:04:39Z'));
     expect(s.browseUrl.endsWith('_LATLON.png')).toBe(true);
+    expect(s.thumbUrl?.endsWith('_LATLON_thumbnail.png')).toBe(true);
     expect(s.footprint).toHaveLength(5);
     expect(s.stack).toBe('76-Ascending-21');
     expect(s.earthdataUrl).toContain('C123-ASF');
@@ -47,7 +48,7 @@ describe('groupPasses (one timeline frame per satellite pass)', () => {
   const sq = (lat: number, lng: number): [number, number][] => [[lat, lng], [lat + 1, lng], [lat + 1, lng + 1], [lat, lng + 1], [lat, lng]];
   const mk = (id: string, track: number, dir: 'Ascending' | 'Descending', t: number, frame = 1, status: 'Validated' | 'Provisional' = 'Validated', fp = sq(0, 0)): NisarScene => ({
     id, stack: `${track}-${dir}-${frame}`, time: t, start: t, end: t + 30_000, product: 'GCOV', status, footprint: fp,
-    track, frame, direction: dir, browseUrl: '', kmlUrl: null, earthdataUrl: '',
+    track, frame, direction: dir, browseUrl: '', thumbUrl: null, kmlUrl: null, earthdataUrl: '',
   });
   const scenes = [
     mk('p3', 10, 'Ascending', 15 * day), // same track, next repeat cycle

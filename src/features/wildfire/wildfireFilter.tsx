@@ -5,6 +5,11 @@ import { groupByUtcDay } from '../../services/time/group';
 import { fmtCoord } from '../../services/format';
 import { FireImagery } from './FireImagery';
 import { FirePopup } from './FirePopup';
+import { isoDay } from './gibsSnapshots';
+import { HMS_INFO, type SmokeDensity, smokeFor, subscribeSmoke } from './smoke';
+
+const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi';
+const SMOKE_EDGE: Record<SmokeDensity, string> = { light: '#cbd5e1', medium: '#94a3b8', heavy: '#64748b' };
 
 /** One dated location report for a wildfire event, as published by EONET's sources. */
 export interface FireReport {
@@ -115,6 +120,25 @@ function fireOverlays({ data, observations, index, layers, effects, selectedId, 
   const out: OverlaySpec[] = [];
   const day = data.days[index];
 
+  // NOAA analysts' smoke areas for this UTC day, as gray dot patterns (denser/darker = heavier).
+  if (layers.smoke && day) {
+    const sm = smokeFor(day.day);
+    if (sm.status === 'ready') {
+      sm.areas.forEach((a, k) => out.push({
+        kind: 'polygon', id: `smoke-${day.day}-${k}`, pane: 'reference', rings: [a.ring],
+        color: SMOKE_EDGE[a.density], weight: 0.6, opacity: 0.5, fillColor: `url(#smoke-${a.density})`, fillOpacity: 1,
+      }));
+    }
+  }
+  // Satellite heat detections (VIIRS 375 m) for this UTC day, drawn by NASA GIBS.
+  if (layers.hotspots && day) {
+    out.push({
+      kind: 'tile', id: `hotspots-${day.day}`, pane: 'data', url: GIBS_WMS, opacity: 1,
+      attribution: 'Active fires: NASA FIRMS VIIRS NOAA-20 375 m via NASA GIBS',
+      wms: { layers: 'VIIRS_NOAA20_Thermal_Anomalies_375m_All', params: { time: isoDay(day.day) } },
+    });
+  }
+
   // Trails connect an event's own successive reported locations (identity from the source).
   if (effects.trails) {
     for (const ev of Object.values(data.events)) {
@@ -171,7 +195,18 @@ function fireOverlays({ data, observations, index, layers, effects, selectedId, 
   return out;
 }
 
-function fireStats({ data, index, observations, options }: Ctx): StatItem[] {
+function smokeStat(day: number): StatItem {
+  const sm = smokeFor(day);
+  if (sm.status === 'loading') return { id: 'smoke', label: 'Smoke areas (NOAA HMS)', value: 'Loading…' };
+  if (sm.status === 'error') return { id: 'smoke', label: 'Smoke areas (NOAA HMS)', value: 'Unavailable', hint: sm.message };
+  const heavy = sm.areas.filter((a) => a.density === 'heavy').length;
+  return {
+    id: 'smoke', label: 'Smoke areas (NOAA HMS)', value: sm.areas.length ? `${sm.areas.length} (${heavy} heavy)` : 'None mapped',
+    hint: 'Outlined by NOAA analysts from satellite imagery for this UTC day, across North America',
+  };
+}
+
+function fireStats({ data, index, observations, options, layers }: Ctx): StatItem[] {
   const d = data.days[index];
   if (!d) return [];
   const t = observations[index].time;
@@ -188,6 +223,7 @@ function fireStats({ data, index, observations, options }: Ctx): StatItem[] {
     { id: 'recent', label: `Events reported in last ${options.trailingDays} days`, value: String(recentEvents.size) },
     { id: 'largest', label: 'Largest reported size that day', value: largest ? sizeText(largest) : '—', hint: largest ? data.events[largest.eventId].title : 'Incident size is reported by the source agency, not measured by satellite' },
     { id: 'total', label: 'Events in selected range', value: String(Object.keys(data.events).length) },
+    ...(layers.smoke ? [smokeStat(d.day)] : []),
   ];
 }
 
@@ -243,7 +279,6 @@ function FireOptionsPanel({ options, onChange }: OptionsProps<FireOptions>) {
   );
 }
 
-const FIRMS_KEY = (import.meta.env.VITE_FIRMS_MAP_KEY as string | undefined)?.trim();
 
 export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   id: 'wildfire',
@@ -258,12 +293,16 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   availableLayers: [
     { id: 'reports', label: 'Reported incidents (current day)', description: 'Incident locations reported on the selected UTC day. Size from the reporting agency when provided.', provenance: 'report', defaultVisible: true, swatch: '#f97316' },
     { id: 'recent', label: 'Earlier reports (fading)', description: 'Reports from the preceding days in the trailing window.', provenance: 'report', defaultVisible: true, swatch: 'rgba(253,186,116,0.5)' },
-    { id: 'hotspots', label: 'Active-fire hotspots (VIIRS/MODIS)', description: 'Satellite thermal anomaly detections from NASA FIRMS.', provenance: 'observed', defaultVisible: false, unavailableReason: FIRMS_KEY ? 'FIRMS key detected, but the hotspot adapter is not implemented yet.' : 'Not connected — needs a free NASA FIRMS MAP_KEY (VITE_FIRMS_MAP_KEY).' },
+    { id: 'hotspots', label: 'Active-fire hotspots (VIIRS)', description: 'Satellite heat detections (VIIRS NOAA-20, 375 m, day and night) for the shown UTC day, from NASA FIRMS via GIBS. Each red dot is one detection — not a fire perimeter.', provenance: 'observed', defaultVisible: false, swatch: '#ef4444' },
+    { id: 'smoke', label: 'Smoke (NOAA HMS)', description: 'Smoke areas outlined daily by NOAA analysts from satellite imagery. Sparse light dots = light smoke, dense dark dots = heavy. An analysis of the smoke layer, not ground-level air quality.', provenance: 'derived', defaultVisible: false, swatch: 'radial-gradient(circle, #94a3b8 35%, transparent 40%) 0 0 / 5px 5px' },
     { id: 'perimeters', label: 'Mapped fire perimeters', description: 'Agency-mapped perimeters (e.g. NIFC for US, CWFIS for Canada).', provenance: 'report', defaultVisible: false, unavailableReason: 'Not connected yet.' },
     { id: 'burn', label: 'Burn scars (SAR / optical change)', description: 'Burned-area change detection between observations.', provenance: 'derived', defaultVisible: false, unavailableReason: 'Not connected yet.' },
   ],
   sourceAttribution: [
     { name: 'NASA EONET v3 — Wildfires category', url: 'https://eonet.gsfc.nasa.gov/', type: 'Event aggregator (incident reports)', detail: 'Live query. Underlying sources (e.g. IRWIN, GDACS) are linked per event.' },
+    { name: 'NOAA Hazard Mapping System (HMS) smoke', url: HMS_INFO, type: 'Analyst-drawn smoke areas from satellite imagery (daily)', detail: 'Light / medium / heavy smoke outlines for each UTC day, fetched through the /proxy/hms rewrite (NOAA sends no CORS header).' },
+    { name: 'GOES-East / GOES-West ABI GeoColor via NASA GIBS', url: 'https://nasa-gibs.github.io/gibs-api-docs/', type: 'Geostationary satellite imagery (every 10 min)', detail: 'Smoke drift loop in the fire popup.' },
+    { name: 'Open-Meteo historical forecast API', url: 'https://open-meteo.com/', type: 'Modelled weather (not an observation)', detail: '850 hPa wind at the fire near local noon, shown as the smoke-drift arrow.' },
     { name: 'NASA GIBS / Worldview Snapshots — VIIRS & MODIS', url: 'https://nasa-gibs.github.io/gibs-api-docs/', type: 'Satellite optical imagery and thermal-anomaly detections', detail: 'Shown when you click a fire: daily corrected-reflectance true colour plus the same sensor’s active-fire detections (VIIRS 375 m / MODIS 1 km) for the chosen UTC day.' },
   ],
   defaultRange: (now) => ({ start: now - 30 * DAY, end: now }),
@@ -312,5 +351,6 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   },
   Detail: FireDetail,
   Popup: FirePopup,
+  subscribe: subscribeSmoke,
   Options: FireOptionsPanel,
 };

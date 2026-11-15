@@ -1,46 +1,63 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GeoBounds, OverlaySpec, TimeRange } from '../types';
-import { type NisarPass, type NisarProduct, type NisarScene, groupPasses, searchNisar } from '../services/data/nisar';
+import type { OverlaySpec, TimeRange } from '../types';
+import { type NisarFrameStep, type NisarPass, type NisarProduct, type NisarScene, flattenFrames, groupPasses, missingFrames, searchNisarRegion } from '../services/data/nisar';
+import type { NisarMode } from '../state/store';
 import { type ProcessedImage, processSceneImage } from '../services/data/nisarImage';
 import { fmtDate } from '../services/time/format';
-import type { NisarStripMode } from '../state/store';
 
-/** Radar images are downloaded and processed in the browser, so only when zoomed in. */
-export const NISAR_IMAGE_MIN_ZOOM = 6;
-/** CMR pages per collection (150 each). Newest first, so a cut drops the oldest passes. */
-const MAX_PAGES = 4;
-/** Earlier passes drawn in build-up mode (older ones are left out to keep the map responsive). */
-const MAX_TRAIL_SCENES = 600;
-/** Earlier passes whose already-loaded images stay on the map in build-up mode. */
-const IMAGE_TRAIL_PASSES = 6;
+/** The previous pass stays on the map, faded, behind the current one. */
+export const NISAR_TRAIL_PASSES = 1;
+/** Passes ahead of the current one whose images are loaded in advance. */
+const PREFETCH_PASSES = 2;
+/** Satellite follow mode: frames ahead whose full images are loaded in advance. */
+const PREFETCH_FRAMES = 3;
+/** Playback waits this long for a pass's images before moving on without them. */
+export const NISAR_IMAGE_WAIT_MS = 8000;
 
 export type NisarState = 'off' | 'loading' | 'ready' | 'error';
+type Variant = 'thumb' | 'full';
 
 export interface UseNisarArgs {
   enabled: boolean;
   product: NisarProduct;
-  view: GeoBounds | null;
-  zoom: number;
   range: TimeRange;
-  /** Index of the current pass (the timeline frame), or -1. */
+  /** Timeline index: a pass ('pass' mode) or a single frame ('satellite' mode), or -1. */
   index: number;
-  mode: NisarStripMode;
+  mode: NisarMode;
   opacity: number;
+  /** Small thumbnails while playing; full-resolution images for the current pass when paused. */
+  playing: boolean;
 }
 
 type ImageEntry = { status: 'loading' } | { status: 'ready'; image: ProcessedImage } | { status: 'error'; message: string };
 
 const imageCache = new Map<string, ImageEntry>();
-const MAX_CACHED = 40;
+const MAX_CACHED = 150;
+/** Full-resolution images are large; keep fewer of them. */
+const MAX_FULL = 30;
+const key = (v: Variant, s: NisarScene) => `${v}:${s.id}`;
 
-function rounded(b: GeoBounds, zoom: number): GeoBounds {
-  // Snap the search box (coarser when zoomed out) so small pans don't trigger new searches.
-  const step = zoom >= 6 ? 0.25 : zoom >= 4 ? 1 : 5;
-  const r = (v: number, f: (x: number) => number) => f(v / step) * step;
-  return { west: r(b.west, Math.floor), south: r(b.south, Math.floor), east: r(b.east, Math.ceil), north: r(b.north, Math.ceil) };
+/** Passes on the map for the current frame, oldest first (the current pass last). */
+export function shownPasses(passes: NisarPass[], index: number): NisarPass[] {
+  if (index < 0 || !passes[index]) return [];
+  return passes.slice(Math.max(0, index - NISAR_TRAIL_PASSES), index + 1);
 }
 
-/** Real NISAR passes over the map view, as timeline frames, drawn as strips. */
+/**
+ * What is on the map, oldest first (current pass last). 'pass': the current pass and the previous
+ * one. 'satellite': the current pass only up to the current frame, plus the previous pass.
+ */
+export function drawnPasses(passes: NisarPass[], frames: NisarFrameStep[], index: number, mode: NisarMode): NisarPass[] {
+  if (mode === 'pass') return shownPasses(passes, index);
+  const f = frames[index];
+  if (!f) return [];
+  const soFar = frames.slice(0, index + 1).filter((x) => x.passIndex === f.passIndex).map((x) => x.scene);
+  const cur = { ...passes[f.passIndex], scenes: soFar };
+  const prev = passes[f.passIndex - 1];
+  return prev ? [prev, cur] : [cur];
+}
+
+/** Real NISAR passes over the US & Canada as timeline frames, drawn as their radar images. */
 export function useNisar(a: UseNisarArgs) {
   const [passes, setPasses] = useState<NisarPass[]>([]);
   const [state, setState] = useState<NisarState>('off');
@@ -48,80 +65,98 @@ export function useNisar(a: UseNisarArgs) {
   const [truncated, setTruncated] = useState(false);
   const [version, bump] = useState(0);
 
-  const box = a.enabled && a.view ? rounded(a.view, a.zoom) : null;
-  const boxKey = box ? `${box.west},${box.south},${box.east},${box.north}` : '';
-
-  // Search (debounced; stale requests cancelled).
+  // Search the whole region (not the map view), so panning never re-searches.
   useEffect(() => {
-    if (!a.enabled || !box) {
+    if (!a.enabled) {
       setState('off');
       setPasses([]);
       return;
     }
     const ctrl = new AbortController();
     setState('loading');
-    const timer = window.setTimeout(() => {
-      setError(null);
-      searchNisar(a.product, box, a.range, ctrl.signal, MAX_PAGES)
-        .then((r) => {
-          setPasses(groupPasses(r.scenes));
-          setTruncated(r.truncated);
-          setState('ready');
-        })
-        .catch((e: unknown) => {
-          if (ctrl.signal.aborted) return;
-          setError(e instanceof Error ? e.message : String(e));
-          setState('error');
-        });
-    }, 450);
-    return () => {
-      window.clearTimeout(timer);
-      ctrl.abort();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a.enabled, a.product, boxKey, a.range.start, a.range.end]);
+    setError(null);
+    searchNisarRegion(a.product, a.range, ctrl.signal)
+      .then((r) => {
+        setPasses(groupPasses(r.scenes));
+        setTruncated(r.truncated);
+        setState('ready');
+      })
+      .catch((e: unknown) => {
+        if (ctrl.signal.aborted) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setState('error');
+      });
+    return () => ctrl.abort();
+  }, [a.enabled, a.product, a.range.start, a.range.end]);
 
-  const current = a.index >= 0 ? passes[a.index] : undefined;
-  const zoomedIn = a.zoom >= NISAR_IMAGE_MIN_ZOOM;
+  const sat = a.mode === 'satellite';
+  const frames = useMemo(() => flattenFrames(passes), [passes]);
+  const firstFrame = useMemo(() => {
+    const m: number[] = [];
+    frames.forEach((f, i) => {
+      if (m[f.passIndex] === undefined) m[f.passIndex] = i;
+    });
+    return m;
+  }, [frames]);
+  const passIndex = sat ? (frames[a.index]?.passIndex ?? -1) : a.index;
+  const current = passIndex >= 0 ? passes[passIndex] : undefined;
+  const currentScene = sat ? frames[a.index]?.scene : undefined;
+  const drawn = useMemo(() => drawnPasses(passes, frames, a.index, a.mode), [passes, frames, a.index, a.mode]);
 
-  // Images to load: the current pass, plus the next one so playback doesn't wait.
-  const wantedRef = useRef<NisarScene[]>([]);
+  // Images to load, in priority order. 'pass': the current pass's thumbnails (full images when
+  // paused), then the next passes' thumbnails. 'satellite': the current frame and the next few,
+  // thumbnail first (instant) then full resolution (the camera is zoomed in).
+  const wanted: { k: string; scene: NisarScene; url: string }[] = [];
+  if (a.enabled && current) {
+    const thumb = (s: NisarScene) => ({ k: key('thumb', s), scene: s, url: s.thumbUrl ?? s.browseUrl });
+    const full = (s: NisarScene) => ({ k: key('full', s), scene: s, url: s.browseUrl });
+    if (sat && currentScene) {
+      wanted.push(thumb(currentScene), full(currentScene));
+      for (const f of frames.slice(a.index + 1, a.index + 1 + PREFETCH_FRAMES)) wanted.push(thumb(f.scene));
+      for (const f of frames.slice(a.index + 1, a.index + 1 + PREFETCH_FRAMES)) wanted.push(full(f.scene));
+    } else {
+      for (const s of current.scenes) wanted.push(thumb(s));
+      if (!a.playing) for (const s of current.scenes) wanted.push(full(s));
+      for (const p of passes.slice(passIndex + 1, passIndex + 1 + PREFETCH_PASSES)) for (const s of p.scenes) wanted.push(thumb(s));
+    }
+  }
+  const wantedRef = useRef(wanted);
+  wantedRef.current = wanted;
   const keepRef = useRef<Set<string>>(new Set());
-  wantedRef.current = a.enabled && zoomedIn && current ? [...current.scenes, ...(passes[a.index + 1]?.scenes ?? [])] : [];
   keepRef.current = new Set([
-    ...wantedRef.current.map((s) => s.id),
-    ...passes.slice(Math.max(0, a.index - IMAGE_TRAIL_PASSES), a.index).flatMap((p) => p.scenes.map((s) => s.id)),
+    ...wanted.map((w) => w.k),
+    ...drawn.flatMap((p) => p.scenes.flatMap((s) => [key('thumb', s), key('full', s)])),
   ]);
-  const wantedKey = wantedRef.current.map((s) => s.id).join('|');
+  const wantedKey = wanted.map((w) => w.k).join('|');
   const loader = useRef<{ inflight: Map<string, AbortController> }>({ inflight: new Map() });
   useEffect(() => {
     const L = loader.current;
-    const wanted = new Set(wantedRef.current.map((s) => s.id));
-    for (const [id, ctrl] of L.inflight) {
-      if (!wanted.has(id)) {
+    const want = new Set(wantedRef.current.map((w) => w.k));
+    for (const [k, ctrl] of L.inflight) {
+      if (!want.has(k)) {
         ctrl.abort();
-        L.inflight.delete(id);
-        imageCache.delete(id);
+        L.inflight.delete(k);
+        imageCache.delete(k);
       }
     }
     const pump = () => {
-      for (const s of wantedRef.current) {
-        if (L.inflight.size >= 3) break;
-        if (imageCache.has(s.id)) continue;
+      for (const w of wantedRef.current) {
+        if (L.inflight.size >= 4) break;
+        if (imageCache.has(w.k)) continue;
         const ctrl = new AbortController();
-        L.inflight.set(s.id, ctrl);
-        imageCache.set(s.id, { status: 'loading' });
-        processSceneImage(s, ctrl.signal)
+        L.inflight.set(w.k, ctrl);
+        imageCache.set(w.k, { status: 'loading' });
+        processSceneImage(w.scene, ctrl.signal, w.url)
           .then((image) => {
-            if (!ctrl.signal.aborted) imageCache.set(s.id, { status: 'ready', image });
+            if (!ctrl.signal.aborted) imageCache.set(w.k, { status: 'ready', image });
             else URL.revokeObjectURL(image.url);
           })
           .catch((e: unknown) => {
-            if (ctrl.signal.aborted) imageCache.delete(s.id);
-            else imageCache.set(s.id, { status: 'error', message: e instanceof Error ? e.message : String(e) });
+            if (ctrl.signal.aborted) imageCache.delete(w.k);
+            else imageCache.set(w.k, { status: 'error', message: e instanceof Error ? e.message : String(e) });
           })
           .finally(() => {
-            if (L.inflight.get(s.id) === ctrl) L.inflight.delete(s.id);
+            if (L.inflight.get(w.k) === ctrl) L.inflight.delete(w.k);
             evict(keepRef.current);
             bump((n) => n + 1);
             pump();
@@ -136,59 +171,69 @@ export function useNisar(a: UseNisarArgs) {
     for (const ctrl of loader.current.inflight.values()) ctrl.abort();
   }, []);
 
+  /** Best loaded image of a scene: full resolution if available, else the thumbnail. */
+  const best = (s: NisarScene) => {
+    const f = imageCache.get(key('full', s));
+    if (f?.status === 'ready') return f.image;
+    const t = imageCache.get(key('thumb', s));
+    return t?.status === 'ready' ? t.image : null;
+  };
+
   const overlays: OverlaySpec[] = useMemo(() => {
     if (!a.enabled || !current) return [];
     const out: OverlaySpec[] = [];
-    // Earlier passes (build-up): dim strips, newest last so they draw on top.
-    if (a.mode === 'build') {
-      const earlier = passes.slice(0, a.index);
-      let budget = MAX_TRAIL_SCENES;
-      const trail: NisarScene[] = [];
-      for (let k = earlier.length - 1; k >= 0 && budget > 0; k--) {
-        for (const s of earlier[k].scenes) {
-          if (budget-- <= 0) break;
-          trail.push(s);
-        }
+    for (const p of drawn) {
+      const isCurrent = p.id === current.id;
+      for (const s of p.scenes) {
+        const img = best(s);
+        if (img) out.push({ kind: 'image', id: `nisar-img-${s.id}`, pane: 'radar', url: img.url, bounds: img.bounds, opacity: isCurrent ? a.opacity : a.opacity * 0.35 });
       }
-      for (const s of trail.reverse()) {
-        out.push({ kind: 'polygon', id: `nisar-fp-${s.id}`, pane: 'radar', rings: [s.footprint], color: '#a78bfa', weight: 0.8, opacity: 0.45, fillColor: '#7c3aed', fillOpacity: 0.08 });
-      }
-      if (zoomedIn) {
-        for (const p of passes.slice(Math.max(0, a.index - IMAGE_TRAIL_PASSES), a.index)) {
-          for (const s of p.scenes) {
-            const e = imageCache.get(s.id);
-            if (e?.status === 'ready') out.push({ kind: 'image', id: `nisar-img-${s.id}`, pane: 'radar', url: e.image.url, bounds: e.image.bounds, opacity: a.opacity * 0.55 });
-          }
-        }
-      }
-    }
-    // Current pass: bright strip, with its radar image when zoomed in.
-    for (const s of current.scenes) {
-      const e = zoomedIn ? imageCache.get(s.id) : undefined;
-      if (e?.status === 'ready') out.push({ kind: 'image', id: `nisar-img-${s.id}`, pane: 'radar', url: e.image.url, bounds: e.image.bounds, opacity: a.opacity });
-      out.push({
-        kind: 'polygon', id: `nisar-fp-${s.id}`, pane: 'radar', rings: [s.footprint], color: '#f0abfc', weight: 1.6, opacity: 0.95,
-        fillColor: '#c084fc', fillOpacity: e?.status === 'ready' ? 0 : 0.22,
-      });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a.enabled, a.mode, a.index, a.opacity, passes, zoomedIn, version]);
+  }, [a.enabled, a.opacity, drawn, current, version]);
 
-  const imageStatus = (id: string) => imageCache.get(id)?.status ?? null;
+  // Ready once the thumbnails of the current step (pass, or single frame) have loaded or failed.
+  const settled = (s: NisarScene) => {
+    const st = imageCache.get(key('thumb', s))?.status;
+    return st === 'ready' || st === 'error';
+  };
+  const currentReady = !current || (currentScene ? settled(currentScene) : current.scenes.every(settled));
+  const drawnCurrent = drawn[drawn.length - 1];
+  const currentFailed = drawnCurrent ? drawnCurrent.scenes.filter((s) => imageCache.get(key('thumb', s))?.status === 'error').length : 0;
+  const imageStatus = (id: string) => imageCache.get(`thumb:${id}`)?.status ?? null;
+  /** Timeline index of a pass's first step. */
+  const obsIndexOfPass = (i: number) => (sat ? (firstFrame[i] ?? 0) : i);
 
-  return { state, error, passes, truncated, overlays, imageStatus, zoomedIn };
+  return { state, error, passes, frames, passIndex, current, currentScene, drawn, obsIndexOfPass, truncated, overlays, imageStatus, currentReady, currentFailed };
 }
 
 /** Drops the oldest cached images, never ones on screen or about to be. */
 function evict(keep: Set<string>) {
-  if (imageCache.size <= MAX_CACHED) return;
-  for (const [id, e] of imageCache) {
-    if (imageCache.size <= MAX_CACHED) break;
-    if (e.status === 'loading' || keep.has(id)) continue;
+  let full = 0;
+  for (const k of imageCache.keys()) if (k.startsWith('full:')) full++;
+  for (const [k, e] of imageCache) {
+    if (full <= MAX_FULL) break;
+    if (!k.startsWith('full:') || e.status === 'loading' || keep.has(k)) continue;
     if (e.status === 'ready') URL.revokeObjectURL(e.image.url);
-    imageCache.delete(id);
+    imageCache.delete(k);
+    full--;
   }
+  if (imageCache.size <= MAX_CACHED) return;
+  for (const [k, e] of imageCache) {
+    if (imageCache.size <= MAX_CACHED) break;
+    if (e.status === 'loading' || keep.has(k)) continue;
+    if (e.status === 'ready') URL.revokeObjectURL(e.image.url);
+    imageCache.delete(k);
+  }
+}
+
+/** e.g. "5 of 7 frames · 35, 36 not available": frames missing between a pass's ends aren't in NASA's catalog. */
+export function frameSummary(pass: NisarPass): string {
+  const present = new Set(pass.scenes.map((s) => s.frame)).size;
+  const missing = missingFrames(pass);
+  if (!missing.length) return `${present} frame${present > 1 ? 's' : ''}`;
+  return `${present} of ${present + missing.length} frames · ${missing.join(', ')} not available`;
 }
 
 export function sceneDateText(s: { product: NisarProduct; start: number; end: number }): string {

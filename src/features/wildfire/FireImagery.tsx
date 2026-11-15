@@ -5,6 +5,8 @@ import { FIRE_SENSORS, isoDay, snapshotUrl, utcDay, worldviewUrl } from './gibsS
 
 const DAY = 864e5;
 const SPANS = [
+  { half: 0.045, label: '~10 km (individual detections)' },
+  { half: 0.11, label: '~25 km' },
   { half: 0.2, label: '~45 km' },
   { half: 0.4, label: '~90 km' },
   { half: 0.9, label: '~200 km' },
@@ -37,7 +39,7 @@ export function FireImagery({ at, firstReport, lastReport, timelineDay }: Props)
   const [day, setDay] = useState(() => utcDay(timelineDay ?? lastReport));
   const [sensorId, setSensorId] = useState('noaa20');
   const [hotspots, setHotspots] = useState(true);
-  const [spanIdx, setSpanIdx] = useState(1);
+  const [spanIdx, setSpanIdx] = useState(1); // ~25 km: individual 375 m detections stay distinct
   const [status, setStatus] = useState<Status>('loading');
   const sensor = FIRE_SENSORS.find((s) => s.id === sensorId) ?? FIRE_SENSORS[0];
   const half = SPANS[spanIdx].half;

@@ -3,9 +3,15 @@ import type { DetailProps } from '../../types';
 import { fmtDate } from '../../services/time/format';
 import { FIRE_SENSORS, isoDay, snapshotUrl, utcDay, worldviewUrl } from './gibsSnapshots';
 import type { FireData, FireOptions } from './wildfireFilter';
+import { SmokeDrift } from './SmokeDrift';
 
 const SENSOR = FIRE_SENSORS[0]; // VIIRS NOAA-20: 375 m hotspots
-const HALF_LAT_DEG = 0.3; // ~65 km tall view around the fire
+/** View sizes; close-ups separate individual 375 m detections (like Worldview zoomed in). */
+export const FIRE_ZOOMS = [
+  { half: 0.045, label: '~10 km' },
+  { half: 0.11, label: '~25 km' },
+  { half: 0.3, label: '~65 km' },
+];
 const DAY = 864e5;
 
 type Status = 'loading' | 'ok' | 'error';
@@ -15,7 +21,8 @@ type Status = 'loading' | 'ok' | 'error';
  * or the timeline's current day. The sidebar detail has the full controls (other days, sensors, area).
  */
 export function FirePopup({ data, observations, index, selectedId, onClose }: DetailProps<FireData, FireOptions>) {
-  const [view, setView] = useState<'compare' | 'day'>('compare');
+  const [view, setView] = useState<'compare' | 'day' | 'smoke'>('compare');
+  const [half, setHalf] = useState(FIRE_ZOOMS[1].half);
   const ev = selectedId ? data.events[selectedId] : undefined;
   const obsTime = observations[index]?.time;
   // The report on the shown day if there is one, else the latest report up to it.
@@ -23,14 +30,14 @@ export function FirePopup({ data, observations, index, selectedId, onClose }: De
     ? ([...ev.reports].reverse().find((r) => obsTime == null || utcDay(r.time) <= utcDay(obsTime)) ?? ev.reports[0])
     : undefined;
   const day = utcDay(obsTime ?? report?.time ?? Date.now());
-  const url = report ? snapshotUrl({ at: report.at, day, sensor: SENSOR, hotspots: true, halfLatDeg: HALF_LAT_DEG, height: 360 }) : '';
+  const url = report ? snapshotUrl({ at: report.at, day, sensor: SENSOR, hotspots: true, halfLatDeg: half, height: 360 }) : '';
   const [status, setStatus] = useState<Status>('loading');
   useEffect(() => setStatus('loading'), [url]);
   if (!ev || !report) return null;
 
   const after = utcDay(ev.reports[0].time);
   const before = after - DAY;
-  const shot = (d: number) => ({ day: d, url: snapshotUrl({ at: report.at, day: d, sensor: SENSOR, hotspots: true, halfLatDeg: HALF_LAT_DEG, height: 360 }) });
+  const shot = (d: number) => ({ day: d, url: snapshotUrl({ at: report.at, day: d, sensor: SENSOR, hotspots: true, halfLatDeg: half, height: 360 }) });
 
   return (
     <div className="fire-popup">
@@ -38,7 +45,7 @@ export function FirePopup({ data, observations, index, selectedId, onClose }: De
         <div>
           <div className="detail-id">{ev.title}</div>
           <div className="small muted">
-            {view === 'compare' ? `${SENSOR.label} · ${isoDay(before)} vs ${isoDay(after)} (UTC days)` : `${SENSOR.label} · ${isoDay(day)} (UTC day)`}
+            {view === 'compare' ? `${SENSOR.label} · ${isoDay(before)} vs ${isoDay(after)} (UTC days)` : view === 'smoke' ? `Smoke drift · ${isoDay(day)} (UTC day)` : `${SENSOR.label} · ${isoDay(day)} (UTC day)`}
           </div>
         </div>
         <button className="icon-btn" onClick={onClose} aria-label="Close satellite image">✕</button>
@@ -50,8 +57,22 @@ export function FirePopup({ data, observations, index, selectedId, onClose }: De
         <button className={`chip ${view === 'day' ? 'active' : ''}`} onClick={() => setView('day')} aria-pressed={view === 'day'}>
           Timeline day
         </button>
+        <button className={`chip ${view === 'smoke' ? 'active' : ''}`} onClick={() => setView('smoke')} aria-pressed={view === 'smoke'}>
+          Smoke drift
+        </button>
       </div>
-      {view === 'compare' ? (
+      {view !== 'smoke' && (
+        <div className="fire-picks" role="group" aria-label="View size">
+          {FIRE_ZOOMS.map((z) => (
+            <button key={z.half} className={`chip ${half === z.half ? 'active' : ''}`} onClick={() => setHalf(z.half)} aria-pressed={half === z.half}>
+              {z.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'smoke' ? (
+        <SmokeDrift at={report.at} day={day} title={ev.title} />
+      ) : view === 'compare' ? (
         <CompareSlider before={shot(before)} after={shot(after)} title={ev.title} />
       ) : (
         <div className="fire-img-frame">
@@ -68,11 +89,11 @@ export function FirePopup({ data, observations, index, selectedId, onClose }: De
           {status === 'ok' && <span className="fire-img-pin" aria-hidden="true" />}
         </div>
       )}
-      <p className="small muted fire-popup-note">
+      {view !== 'smoke' && <p className="small muted fire-popup-note">
         Daily true colour via NASA GIBS. Red dots = VIIRS 375 m heat detections that day; ring = reported location. Flames are too small to see at
         this resolution, so look for smoke. Clouds can hide everything.{' '}
-        <a href={worldviewUrl(report.at, view === 'compare' ? after : day, SENSOR, HALF_LAT_DEG)} target="_blank" rel="noreferrer">Worldview ↗</a>
-      </p>
+        <a href={worldviewUrl(report.at, view === 'compare' ? after : day, SENSOR, half)} target="_blank" rel="noreferrer">Worldview ↗</a>
+      </p>}
     </div>
   );
 }

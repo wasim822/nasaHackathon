@@ -15,14 +15,14 @@ npm run build
 | Filter | Status | Data | Notes |
 |---|---|---|---|
 | Basemap | Live | Esri World Imagery | Optional "muted" style and Esri place labels |
-| **NISAR passes** (base map) | **Live, real** | NASA–ISRO NISAR L2 GCOV (backscatter) and GUNW (interferogram) footprints and browse images from ASF DAAC, found via NASA CMR | Base map only (no filter selected); off by default. Each pass over the view is a timeline frame drawn as a strip; images inside strips at zoom 6+ |
+| **NISAR passes** (base map) | **Live, real** | NASA–ISRO NISAR L2 GCOV (backscatter) and GUNW (interferogram) browse images from ASF DAAC, found via NASA CMR | Base map only (no filter selected); off by default. Each pass over the US & Canada is a timeline frame shown as its radar image; the camera follows each pass |
 | **Flood** | **Live, real** (default) | Observations: water classified from **real NISAR L2 GCOV** HH/HV backscatter, prepared offline by `server/flood_prep.py`. Baseline: real JRC Global Surface Water | AOI: Mississippi–Missouri confluence near St. Louis, NISAR passes from June 2026. A **Demo** source (simulated scenes) is still selectable in Options and labeled DEMO |
 | **Earthquake** | Live | USGS ComCat (FDSN event API) | Queried by US/Canada bounding boxes plus an approximate US–Mexico border filter |
-| **Wildfire** | Live | NASA EONET v3 wildfire events (mostly US IRWIN incident reports). Clicking a fire shows daily VIIRS/MODIS true colour + thermal hotspots from NASA GIBS | Markers are reported incident *locations*, not satellite hotspots or perimeters. The images are real satellite observations for the chosen UTC day |
+| **Wildfire** | Live | NASA EONET v3 wildfire events (mostly US IRWIN incident reports). Optional map layers: VIIRS 375 m active-fire hotspots (NASA FIRMS via GIBS) and NOAA HMS smoke areas. Clicking a fire shows VIIRS true colour + hotspots (before/after slider, timeline day, ~10/25/65 km views) and a smoke-drift view (GOES loop + Open-Meteo wind) | Markers are reported incident *locations*; hotspots are satellite heat detections, not perimeters; smoke is NOAA's analyst-drawn outline; the wind arrow is modelled |
 | **Wetlands** | **Live, real** | Open water and possible inundated vegetation classified from **real NISAR L2 GCOV**, prepared offline by `server/flood_prep.py --aoi atchafalaya` | AOI: Atchafalaya Basin, Louisiana; 32 passes Nov 2025 – Nov 2026 |
 | Glacier, Forest, Ground Deformation | Coming soon | – | Can't be activated. A real NISAR GUNW deformation module exists (`src/features/deformation`) but is held back until its processing is validated |
 
-The following layers are listed but disabled, with the reason shown: FIRMS VIIRS/MODIS hotspots (needs `VITE_FIRMS_MAP_KEY`), fire perimeters, burn scars, and InSAR deformation (Earthquake filter).
+The following layers are listed but disabled, with the reason shown: fire perimeters, burn scars, and InSAR deformation (Earthquake filter).
 
 ## Architecture
 
@@ -44,13 +44,20 @@ The following layers are listed but disabled, with the reason shown: FIRMS VIIRS
 
 ## NISAR passes on the base map
 
-- **Where:** only when no data filter is selected. Turn on *Follow NISAR passes on the timeline* in the sidebar.
-- **Search:** queries NASA CMR (public, no login) for the map view and timeline range, up to 4 pages per collection, newest first (a notice says when older products are cut off). Validated products are preferred over provisional ones of the same acquisition.
-- **Timeline:** adjoining product frames from the same track, direction and minutes are grouped into one *pass*. Each pass is one observed frame at its real acquisition time, so play, step, scrub, speed and loop move pass by pass. Gaps longer than the nominal 12-day repeat are shown as no-data.
-- **Map:** the current pass is a bright strip. *Build up coverage* (default) keeps earlier passes as dim strips so coverage fills in; *Single strip* shows only the current pass. The camera never moves on its own.
-- **Images:** at zoom 6+ the current pass's browse images are drawn inside the strip (the next pass is prefetched). Interferograms use their browse KML bounds; backscatter images are fitted from the footprint to the swath's extreme pixels (residual checked, about 1 km), resampled to Web Mercator, with the black background made transparent.
-- **Clicking:** a strip opens a card with that frame's browse image, acquisition time, orbit and Earthdata link. Clicking where no strip is shown says *No NISAR data available here* and lists other passes in the range that do cover the spot. Dragging/zooming the map, clicking outside, or Escape closes the card.
+- **Where:** only when no data filter is selected. Turn on *Show NISAR passes on the timeline* in the sidebar.
+- **Search:** queries NASA CMR (public, no login) over the app region (US & Canada boxes, as for the other filters) for the timeline range, newest first (pages fetched in parallel; a full week takes a few seconds), regardless of where the map is pointed. Frames that don't touch the region, or that sit across the antimeridian (western Aleutians), are dropped. Validated products are preferred over provisional ones of the same acquisition. Default range: the week ending 14 days ago, since products publish about a week after acquisition and recent passes keep filling in. Frames missing in the middle of a pass (not in NASA's catalog: not yet published or not recorded) are listed in the timeline status, e.g. *5 of 7 frames · 35, 36 not available*, along with any images that failed to load.
+- **Timeline:** adjoining product frames from the same track, direction and minutes are grouped into one *pass*. Each pass is one observed frame at its real acquisition time, so play, step, scrub, speed and loop move pass by pass. Playback waits up to 8 s for a pass's images before moving on. Gaps longer than the nominal 12-day repeat are shown as no-data.
+- **Map:** only radar images, no outlines: the current pass at full opacity and the previous pass faded behind it. With *Follow satellite* on (default) the camera frames each pass as the timeline moves; dragging the map turns following off until the button is pressed again. Long passes over Canada and the Arctic can span tens of degrees, so the camera zooms out for those.
+- **Satellite follow mode:** a second choice next to *Follow passes*. Each timeline step is one image (frame, ~240 km) in the order NISAR took it (~35–40 s apart in reality, ~1 s per step at 1×). The camera stays zoomed in and moves image by image; the current pass builds up behind it and the previous pass fades. Thumbnails show instantly and full-resolution images (~4.7 MB each) swap in, with the next 3 prefetched, so 2–4× playback may wait on downloads. Missing frames are skipped and named in the status line.
+- **Images:** ~100 px browse thumbnails while playing (fast), upgraded to the full browse images for the current pass when paused; the next 2 passes are prefetched. Interferograms use their browse KML bounds; backscatter images are fitted from the footprint to the swath's extreme pixels (residual checked), resampled to Web Mercator, with the black background made transparent.
+- **Clicking:** an image opens a card with that frame's full browse image, acquisition time, orbit and Earthdata link. Clicking where no image is shown says *No NISAR data available here* and lists other passes in the range that do cover the spot. Dragging/zooming the map, clicking outside, or Escape closes the card.
 - **Limitation:** browse images are display-stretched quick-looks. Measuring anything (flood extent, burn scars, displacement) needs the full HDF5 products, which require an Earthdata Login and server-side processing.
+
+## Wildfire smoke and hotspots
+
+- **Hotspots layer:** NASA GIBS WMS `VIIRS_NOAA20_Thermal_Anomalies_375m_All` for the shown UTC day (day and night detections). No key needed, so `VITE_FIRMS_MAP_KEY` is no longer used.
+- **Smoke layer:** NOAA HMS daily smoke KML (light / medium / heavy), drawn as gray dot patterns that stay the same size at any zoom. NOAA sends no CORS header, so the app fetches `/proxy/hms/...`, which `vite.config.ts` rewrites to NOAA for `npm run dev` and `npm run preview`. **A static deployment needs the same rewrite** (e.g. a Netlify/Vercel redirect); without it the layer shows *Unavailable* in the stats.
+- **Smoke drift (fire popup):** GOES-West (west of 105°W) or GOES-East GeoColor images every 30 min across local daytime via Worldview Snapshots, looped, plus Open-Meteo's 850 hPa (~1.5 km) wind near local noon as an arrow pointing where smoke would be carried. The loop is observed imagery; the arrow is a model and is labeled as such.
 
 ## Known limitations
 

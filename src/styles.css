@@ -360,3 +360,12 @@ input[type='range'] { accent-color: var(--mint); }
 .fire-compare-tag { position: absolute; top: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(11, 18, 32, 0.75); color: var(--text); font-size: 11px; pointer-events: none; }
 .fire-compare-tag.left { left: 6px; }
 .fire-compare-tag.right { right: 6px; }
+
+/* Fire smoke drift: GOES loop + model wind arrow */
+.smoke-drift { display: grid; gap: 7px; }
+.smoke-frame { min-height: 200px; }
+.smoke-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.smoke-frame img:first-of-type { position: relative; }
+.smoke-time { position: absolute; left: 6px; bottom: 6px; padding: 1px 6px; border-radius: 4px; background: rgba(2, 6, 12, 0.7); font-size: 11px; }
+.wind-arrow { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: rgba(2, 6, 12, 0.7); color: #fde68a; font-size: 18px; font-weight: 700; }
+.fire-img-nav input[type='range'] { flex: 1; }

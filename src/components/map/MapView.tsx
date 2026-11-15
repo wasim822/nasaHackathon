@@ -23,6 +23,8 @@ export interface MapViewProps {
   onViewChange?(bounds: GeoBounds, zoom: number): void;
   /** The user started dragging or zooming (not programmatic resize/pan). */
   onUserMove?(): void;
+  /** The user started dragging the map (never fired by programmatic moves). */
+  onUserDrag?(): void;
 }
 
 export function MapView(props: MapViewProps) {
@@ -60,6 +62,7 @@ export function MapView(props: MapViewProps) {
     map.on('moveend', reportView);
     // Not 'movestart': container resizes (drawers opening) also fire it.
     map.on('dragstart zoomstart', () => cb.current.onUserMove?.());
+    map.on('dragstart', () => cb.current.onUserDrag?.());
     map.whenReady(reportView);
     mapRef.current = map;
     adapterRef.current = new OverlayAdapter(map, (id) => cb.current.onSelect(id));
@@ -109,5 +112,23 @@ export function MapView(props: MapViewProps) {
     return () => ro.disconnect();
   }, []);
 
-  return <div ref={el} className="map" role="region" aria-label="Satellite map" />;
+  return (
+    <>
+      <div ref={el} className="map" role="region" aria-label="Satellite map" />
+      {/* Dot fills for smoke areas (polygons use fillColor "url(#smoke-…)"); fixed screen size at any zoom. */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <pattern id="smoke-light" width="12" height="12" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="1.4" fill="#e2e8f0" fillOpacity="0.75" />
+          </pattern>
+          <pattern id="smoke-medium" width="8" height="8" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.6" fill="#94a3b8" fillOpacity="0.85" />
+          </pattern>
+          <pattern id="smoke-heavy" width="6" height="6" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.9" fill="#475569" fillOpacity="0.95" />
+          </pattern>
+        </defs>
+      </svg>
+    </>
+  );
 }

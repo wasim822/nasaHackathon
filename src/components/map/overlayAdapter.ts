@@ -110,7 +110,12 @@ export class OverlayAdapter {
     switch (spec.kind) {
       case 'tile': {
         const s = spec as TileOverlay;
-        const layer = L.tileLayer(s.url, { pane: s.pane, opacity: s.opacity, attribution: s.attribution, maxNativeZoom: s.maxNativeZoom, crossOrigin: true });
+        const layer = s.wms
+          ? L.tileLayer.wms(s.url, {
+              pane: s.pane, opacity: s.opacity, attribution: s.attribution, crossOrigin: true,
+              layers: s.wms.layers, format: 'image/png', transparent: true, version: '1.3.0', uppercase: true, ...s.wms.params,
+            })
+          : L.tileLayer(s.url, { pane: s.pane, opacity: s.opacity, attribution: s.attribution, maxNativeZoom: s.maxNativeZoom, crossOrigin: true });
         layer.addTo(this.map);
         this.entries.set(s.id, { spec, layer });
         break;
