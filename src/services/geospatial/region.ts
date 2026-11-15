@@ -19,13 +19,6 @@ export const REGION_BOXES: GeoBounds[] = [
 
 export const REGION_VIEW = { center: [49, -100] as LatLng, zoom: 3 };
 
-/**
- * How far the map may be panned / zoomed out: the region plus a margin (Gulf, Caribbean, Greenland),
- * so users stay over the US & Canada. The western Aleutians across 180° are outside it.
- */
-export const REGION_MAX_BOUNDS: GeoBounds = { south: -30, west: -180, north: 85, east: -30 };
-export const REGION_MIN_ZOOM = 3;
-
 /** Approximate US–Mexico border, west → east (lng, lat). */
 const MEXICO_BORDER: [number, number][] = [
   [-118.5, 32.4],

@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { GeoBounds, LatLng, OverlaySpec } from '../../types';
 import { OverlayAdapter, PANE_Z } from './overlayAdapter';
-import { REGION_MAX_BOUNDS, REGION_MIN_ZOOM, REGION_VIEW } from '../../services/geospatial/region';
+import { REGION_VIEW } from '../../services/geospatial/region';
 import type { BaseLayerId } from '../../state/store';
 
 const ESRI_IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -41,10 +41,8 @@ export function MapView(props: MapViewProps) {
     const map = L.map(el.current, {
       center: REGION_VIEW.center,
       zoom: REGION_VIEW.zoom,
-      minZoom: REGION_MIN_ZOOM,
-      // Keep the view over the US & Canada (no jumping to other world copies).
-      maxBounds: [[REGION_MAX_BOUNDS.south, REGION_MAX_BOUNDS.west], [REGION_MAX_BOUNDS.north, REGION_MAX_BOUNDS.east]],
-      maxBoundsViscosity: 1,
+      minZoom: 2,
+      worldCopyJump: true,
       zoomControl: false,
       attributionControl: true,
     });
