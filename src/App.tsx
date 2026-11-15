@@ -3,7 +3,7 @@ import { MapView } from './components/map/MapView';
 import { LOCATOR_SELECT_ID, locatorOverlay, shouldAutoFit } from './components/map/locator';
 import { Timeline } from './components/timeline/Timeline';
 import { FilterSidebar } from './components/layout/FilterSidebar';
-import { EffectsPanel, LayerList, StatsPanel } from './components/layout/FilterPanel';
+import { EffectsPanel, LayerList, MapLegend, StatsPanel } from './components/layout/FilterPanel';
 import { AboutDrawer } from './components/layout/AboutDrawer';
 import { FILTERS, getFilter } from './features/registry';
 import { selectReducedMotion, useAppStore } from './state/store';
@@ -300,6 +300,8 @@ export default function App() {
         onUserMove={closePopup}
         onUserDrag={() => stripMode && useAppStore.getState().setNisarFollow(false)}
       />
+
+      {filter && filter.status !== 'coming-soon' && <MapLegend filter={filter} visibility={s.layerVisibility} options={options} />}
 
       {popup?.kind === 'filter' && Popup && frameCtx && popup.id === s.selectedId && (
         <div ref={popupRef} className="map-popup" role="dialog" aria-label={`${filter!.label} satellite image`}>

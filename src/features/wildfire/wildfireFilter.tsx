@@ -303,7 +303,12 @@ export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
     { id: 'reports', label: 'Reported incidents (current day)', description: 'Incident locations reported on the selected UTC day. Size from the reporting agency when provided.', provenance: 'report', defaultVisible: true, swatch: '#f97316' },
     { id: 'recent', label: 'Earlier reports (fading)', description: 'Reports from the preceding days in the trailing window.', provenance: 'report', defaultVisible: true, swatch: 'rgba(253,186,116,0.5)' },
     { id: 'hotspots', label: 'Active-fire hotspots (VIIRS)', description: 'Satellite heat detections (VIIRS NOAA-20, 375 m, day and night) for the shown UTC day, from NASA FIRMS via GIBS. Each red dot is one detection — not a fire perimeter.', provenance: 'observed', defaultVisible: false, swatch: '#ef4444' },
-    { id: 'smoke', label: 'Smoke (NOAA HMS)', description: 'Smoke areas outlined daily by NOAA analysts from satellite imagery. Sparse light dots = light smoke, dense dark dots = heavy. An analysis of the smoke layer, not ground-level air quality.', provenance: 'derived', defaultVisible: false, swatch: 'radial-gradient(circle, #94a3b8 35%, transparent 40%) 0 0 / 5px 5px' },
+    { id: 'smoke', label: 'Smoke (NOAA HMS)', description: 'Smoke areas outlined daily by NOAA analysts from satellite imagery. Sparse light dots = light smoke, dense dark dots = heavy. An analysis of the smoke layer, not ground-level air quality.', provenance: 'derived', defaultVisible: false, swatch: 'radial-gradient(circle, #94a3b8 35%, transparent 40%) 0 0 / 5px 5px',
+      legend: { items: [
+        { color: 'radial-gradient(circle, #e2e8f0 30%, transparent 35%) 0 0 / 6px 6px', label: 'Light' },
+        { color: 'radial-gradient(circle, #94a3b8 35%, transparent 40%) 0 0 / 4px 4px', label: 'Medium' },
+        { color: 'radial-gradient(circle, #475569 45%, transparent 50%) 0 0 / 3px 3px', label: 'Heavy' },
+      ] } },
     { id: 'perimeters', label: 'Mapped fire perimeters', description: 'Agency-mapped perimeters (e.g. NIFC for US, CWFIS for Canada).', provenance: 'report', defaultVisible: false, unavailableReason: 'Not connected yet.' },
     { id: 'burn', label: 'Burn scars (SAR / optical change)', description: 'Burned-area change detection between observations.', provenance: 'derived', defaultVisible: false, unavailableReason: 'Not connected yet.' },
   ],
