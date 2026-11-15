@@ -248,7 +248,7 @@ const FIRMS_KEY = (import.meta.env.VITE_FIRMS_MAP_KEY as string | undefined)?.tr
 export const wildfireFilter: FilterDefinition<FireData, FireOptions> = {
   id: 'wildfire',
   label: 'Wildfire',
-  icon: '🔥',
+  icon: 'flame',
   status: 'live',
   summary: `Wildfire incident reports for the ${REGION_NAME} via NASA EONET (largely from the US IRWIN incident system). These are reported locations — not satellite hotspots or perimeters.`,
   missionId: 'viirs',
