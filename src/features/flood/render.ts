@@ -105,3 +105,78 @@ export function selectedBlobImage(data: FloodData, index: number, label: number)
     }),
   );
 }
+
+/** Grid window (rows/cols) around everything a tracked region ever covered, padded, for filmstrip crops. */
+export interface CropWindow {
+  r0: number;
+  c0: number;
+  rows: number;
+  cols: number;
+}
+
+const windows = new WeakMap<FloodData, Map<string, CropWindow | null>>();
+
+export function trackWindow(data: FloodData, trackId: string): CropWindow | null {
+  let m = windows.get(data);
+  if (!m) windows.set(data, (m = new Map()));
+  if (m.has(trackId)) return m.get(trackId)!;
+  const { cols, rows } = data.grid;
+  let rMin = rows, rMax = -1, cMin = cols, cMax = -1;
+  for (const f of data.frames) {
+    const blob = f.blobs.find((b) => b.trackId === trackId);
+    if (!blob) continue;
+    for (let i = 0; i < f.labels.length; i++) {
+      if (f.labels[i] !== blob.label) continue;
+      const r = (i / cols) | 0;
+      const c = i - r * cols;
+      if (r < rMin) rMin = r;
+      if (r > rMax) rMax = r;
+      if (c < cMin) cMin = c;
+      if (c > cMax) cMax = c;
+    }
+  }
+  let win: CropWindow | null = null;
+  if (rMax >= 0) {
+    // Square-ish window with a margin, at least 24 cells (~13 km) so context stays visible.
+    const size = Math.max(24, Math.round(Math.max(rMax - rMin + 1, cMax - cMin + 1) * 1.3));
+    const rc = (rMin + rMax) / 2;
+    const cc = (cMin + cMax) / 2;
+    const r0 = Math.max(0, Math.min(rows - size, Math.round(rc - size / 2)));
+    const c0 = Math.max(0, Math.min(cols - size, Math.round(cc - size / 2)));
+    win = { r0, c0, rows: Math.min(size, rows), cols: Math.min(size, cols) };
+  }
+  m.set(trackId, win);
+  return win;
+}
+
+/** Share of the crop window that this observation imaged (0–1). */
+export function windowCoverage(data: FloodData, index: number, win: CropWindow): number {
+  const f = data.frames[index];
+  const { cols } = data.grid;
+  let seen = 0;
+  for (let r = 0; r < win.rows; r++) {
+    for (let c = 0; c < win.cols; c++) if (f.classes[(win.r0 + r) * cols + win.c0 + c] !== CLASS.NODATA) seen++;
+  }
+  return seen / (win.rows * win.cols);
+}
+
+/** Video frame overlay: flood classes on a transparent background, to sit over a satellite image. */
+export function trackFrameOverlay(data: FloodData, index: number, trackId: string, win: CropWindow): string {
+  const f = data.frames[index];
+  const label = f.blobs.find((b) => b.trackId === trackId)?.label ?? -1;
+  const { cols } = data.grid;
+  return memo(data, `overlay:${trackId}:${index}`, () =>
+    paint(win.cols, win.rows, (_i, r, c) => {
+      const i = (win.r0 + r) * cols + win.c0 + c;
+      if (label > 0 && f.labels[i] === label) {
+        const edge = f.labels[i - 1] !== label || f.labels[i + 1] !== label || f.labels[i - cols] !== label || f.labels[i + cols] !== label;
+        return edge ? [236, 253, 245, 255] : [103, 232, 249, 215];
+      }
+      const k = f.classes[i];
+      if (k === CLASS.NODATA) return (r + c) % 4 < 1 ? [226, 232, 240, 150] : null;
+      if (k === CLASS.PERMANENT) return [29, 78, 216, 200];
+      if (k === CLASS.FLOOD) return [34, 211, 238, 120];
+      return null;
+    }),
+  );
+}

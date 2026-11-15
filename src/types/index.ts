@@ -220,6 +220,8 @@ export interface FrameContext<TData, TOptions> {
 
 export interface DetailProps<TData, TOptions> extends FrameContext<TData, TOptions> {
   onClose: () => void;
+  /** Move the timeline to an observation (pauses playback). */
+  onIndex?: (index: number) => void;
 }
 
 export interface OptionsProps<TOptions> {

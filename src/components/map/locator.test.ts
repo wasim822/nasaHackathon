@@ -27,3 +27,18 @@ describe('zoomed-out locator', () => {
     expect(locatorOverlay(aoi, 3, 'Flood', true)!.pulse).toBeNull();
   });
 });
+
+describe('auto-fit on load', async () => {
+  const { shouldAutoFit } = await import('./locator');
+  const continent = { south: 15, west: -140, north: 70, east: -50 };
+  it('moves to a compact area that is a speck or off-screen', () => {
+    expect(shouldAutoFit(aoi, continent, 3)).toBe(true); // visible but tiny
+    expect(shouldAutoFit(aoi, { south: 45, west: -125, north: 49, east: -120 }, 9)).toBe(true); // off-screen
+    expect(shouldAutoFit(aoi, null, 3)).toBe(true);
+  });
+  it('keeps the user’s view when the area is already visible, and never jumps for wide extents', () => {
+    expect(shouldAutoFit(aoi, { south: 37, west: -92, north: 40, east: -88 }, 8)).toBe(false);
+    expect(shouldAutoFit({ south: 25, west: -125, north: 60, east: -60 }, { south: 0, west: 0, north: 1, east: 1 }, 3)).toBe(false);
+    expect(shouldAutoFit(null, continent, 3)).toBe(false);
+  });
+});
