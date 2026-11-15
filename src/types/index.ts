@@ -118,6 +118,10 @@ export interface TileOverlay extends OverlayBase {
   attribution: string;
   opacity: number;
   maxNativeZoom?: number;
+  /** Stacking order within the pane (higher draws on top). */
+  zIndex?: number;
+  /** Recolour pixels as tiles load (e.g. NDVI bare land → pink). Changing it needs a new overlay id. */
+  recolor?: 'bare-pink';
   /** Request tiles from a WMS endpoint (`url`) instead of a {z}/{x}/{y} template. */
   wms?: { layers: string; params?: Record<string, string> };
 }
@@ -255,6 +259,8 @@ export interface FilterDefinition<TData = unknown, TOptions = unknown> {
   load(ctx: LoadContext<TOptions>): Promise<LoadResult<TData>>;
   overlays(ctx: FrameContext<TData, TOptions>): OverlaySpec[];
   stats(ctx: FrameContext<TData, TOptions>): StatItem[];
+  /** false: the filter shows one chosen date (picked in its Options); the shared timeline is turned off. */
+  timeline?: false;
   timelineEvents?(data: TData, observations: Observation[]): TimelineEvent[];
   chart?(data: TData, observations: Observation[]): ChartSeries | null;
   /** Map click → id of the selected item (or null). */

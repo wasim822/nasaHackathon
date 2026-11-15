@@ -20,7 +20,8 @@ npm run build
 | **Earthquake** | Live | USGS ComCat (FDSN event API) | Queried by US/Canada bounding boxes plus an approximate US–Mexico border filter |
 | **Wildfire** | Live | NASA EONET v3 wildfire events (mostly US IRWIN incident reports). Optional map layers: VIIRS 375 m active-fire hotspots (NASA FIRMS via GIBS) and NOAA HMS smoke areas. Clicking a fire shows VIIRS true colour + hotspots (before/after slider, timeline day, ~10/25/65 km views) and a smoke-drift view (GOES loop + Open-Meteo wind) | Markers are reported incident *locations*; hotspots are satellite heat detections, not perimeters; smoke is NOAA's analyst-drawn outline; the wind arrow is modelled |
 | **Wetlands** | **Live, real** | Open water and possible inundated vegetation classified from **real NISAR L2 GCOV**, prepared offline by `server/flood_prep.py --aoi atchafalaya` | AOI: Atchafalaya Basin, Louisiana; 32 passes Nov 2025 – Nov 2026 |
-| Glacier, Forest, Ground Deformation | Coming soon | – | Can't be activated. A real NISAR GUNW deformation module exists (`src/features/deformation`) but is held back until its processing is validated |
+| **Vegetation** | Live | NASA GIBS: VIIRS NOAA-20 NDVI 16-day composites (2018 → Oct 2026) and 8-day near-real-time after that; optional MODIS land cover (IGBP, yearly 2001–2024) | Pick a date (timeline off): the composite containing it on top, older composites (up to 40 days) stacked underneath to fill cloud/snow gaps. Green = vegetation; pink = bare land / little or no vegetation (recoloured from NASA's brown end; includes dormant and winter land). Not NISAR; ~1 km |
+| Glacier, Ground Deformation | Coming soon | – | Can't be activated. A real NISAR GUNW deformation module exists (`src/features/deformation`) but is held back until its processing is validated |
 
 The following layers are listed but disabled, with the reason shown: fire perimeters, burn scars, and InSAR deformation (Earthquake filter).
 

@@ -457,6 +457,11 @@ export default function App() {
         <div className="demo-banner" role="status">DEMO observations — simulated, not real NISAR data</div>
       )}
 
+      {filter?.timeline === false ? (
+        <footer className="timeline timeline-off" aria-label="Timeline (off)">
+          <div className="tl-off">{`Timeline off for ${filter.label} · pick a date in the sidebar under Options`}</div>
+        </footer>
+      ) : (
       <Timeline
         range={timelineRange}
         bounds={filter?.dataBounds?.(now)}
@@ -481,6 +486,7 @@ export default function App() {
         onSpeed={s.setSpeed}
         onLoop={s.setLoop}
       />
+      )}
     </div>
   );
 }

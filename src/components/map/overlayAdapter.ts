@@ -1,4 +1,39 @@
 import L from 'leaflet';
+import { type Recolor, recolorPixels } from './recolor';
+
+/** A {z}/{x}/{y} tile layer drawn into canvases so its pixels can be recoloured (needs CORS). */
+class RecolorTileLayer extends L.TileLayer {
+  private readonly mode: Recolor;
+  constructor(url: string, options: L.TileLayerOptions, mode: Recolor) {
+    super(url, options);
+    this.mode = mode;
+  }
+  createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
+    const size = this.getTileSize();
+    const canvas = document.createElement('canvas');
+    canvas.width = size.x;
+    canvas.height = size.y;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, size.x, size.y);
+        try {
+          const d = ctx.getImageData(0, 0, size.x, size.y);
+          recolorPixels(d.data, this.mode);
+          ctx.putImageData(d, 0, 0);
+        } catch {
+          // Unreadable (no CORS): keep the original colours rather than fail.
+        }
+      }
+      done(undefined, canvas);
+    };
+    img.onerror = () => done(new Error('tile failed'), canvas);
+    img.src = this.getTileUrl(coords);
+    return canvas;
+  }
+}
 import type {
   CircleOverlay,
   GeoBounds,
@@ -115,7 +150,9 @@ export class OverlayAdapter {
               pane: s.pane, opacity: s.opacity, attribution: s.attribution, crossOrigin: true,
               layers: s.wms.layers, format: 'image/png', transparent: true, version: '1.3.0', uppercase: true, ...s.wms.params,
             })
-          : L.tileLayer(s.url, { pane: s.pane, opacity: s.opacity, attribution: s.attribution, maxNativeZoom: s.maxNativeZoom, crossOrigin: true });
+          : s.recolor
+            ? new RecolorTileLayer(s.url, { pane: s.pane, opacity: s.opacity, attribution: s.attribution, maxNativeZoom: s.maxNativeZoom, zIndex: s.zIndex ?? 1 }, s.recolor)
+            : L.tileLayer(s.url, { pane: s.pane, opacity: s.opacity, attribution: s.attribution, maxNativeZoom: s.maxNativeZoom, crossOrigin: true, zIndex: s.zIndex ?? 1 });
         layer.addTo(this.map);
         this.entries.set(s.id, { spec, layer });
         break;
@@ -195,6 +232,7 @@ export class OverlayAdapter {
     switch (spec.kind) {
       case 'tile': {
         (entry.layer as L.TileLayer).setOpacity(spec.opacity);
+        if (spec.zIndex != null) (entry.layer as L.TileLayer).setZIndex(spec.zIndex);
         break;
       }
       case 'image': {

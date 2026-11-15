@@ -380,3 +380,7 @@ input[type='range'] { accent-color: var(--mint); }
 .flood-video-label .up { color: #67e8f9; }
 .flood-video-label .down { color: #fdba74; }
 .flood-video-count { position: absolute; right: 6px; bottom: 6px; padding: 3px 7px; border-radius: 5px; background: rgba(2, 6, 12, 0.72); font-size: 11px; color: var(--muted); }
+
+/* Filters that show a single chosen date turn the shared timeline off */
+.timeline-off { display: flex; align-items: center; justify-content: center; }
+.tl-off { padding: 14px; font-size: 13px; color: var(--muted); }
